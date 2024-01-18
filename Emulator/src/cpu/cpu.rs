@@ -1,10 +1,11 @@
-use crate::helpers::bitwise::is_highest_bit_set;
+use crate::cpu::instructions::InstructionParameter;
+use crate::helpers::bitwise::{is_highest_bit_set, merge_bytes_into_word, split_word_into_bytes};
 
 pub struct CPU{
     pub registers: Registers,
     pub flags: Flags,
-    pub stack: Vec<u16>,
-    pub memory: Vec<u8>
+    pub memory: Vec<u8>,
+    pub cycles: u16
 }
 
 pub struct Registers{
@@ -63,7 +64,7 @@ impl CPU{
                 xr: 0,
                 yr: 0,
                 sr: 0,
-                sp: 255,
+                sp: 0xFF,
             },
             flags: Flags {
                 negative: false,
@@ -74,370 +75,736 @@ impl CPU{
                 zero: false,
                 carry: true,
             },
-            stack: Vec::new(),
-            memory: vec![0;32 * 32 * 32 * 2]
+            memory: vec![0;32 * 32 * 32 * 2],
+            cycles: 0
         }
     }
 
-    pub fn op_adc(&mut self, val: u8) -> u8 {
-        let mut sum = self.registers.acc as u16 + val as u16;
-        if self.flags.carry {
-            sum += 1
-        }
-        self.flags.carry = sum > 0xFF;
-        self.flags.zero = sum == 0;
-        self.flags.negative = is_highest_bit_set(sum as u8);
+    pub fn op_adc(&mut self, parameter: InstructionParameter) -> Option<u8> {
+        match parameter {
+            InstructionParameter::Byte(value) => {
+                let mut sum = self.registers.acc as u16 + value as u16;
+                if self.flags.carry {
+                    sum += 1
+                }
+                self.flags.carry = sum > 0xFF;
+                self.flags.zero = sum == 0;
+                self.flags.negative = is_highest_bit_set(sum as u8);
 
-        sum as u8
-    }
-
-    pub fn op_and(&mut self, val: u8) -> u8 {
-        let and = self.registers.acc & val;
-        self.flags.zero = and == 0;
-        self.flags.negative = is_highest_bit_set(and);
-
-        and
-    }
-
-    pub fn op_asl(&mut self, value: u8) -> u8 {
-        let result = value << 1;
-        self.flags.carry = value & 0x80 != 0;
-        self.flags.zero = result == 0;
-        self.flags.negative = result & 0x80 != 0;
-
-        result
-    }
-
-    pub fn op_bcc(&mut self, offset: u8){
-        if !self.flags.carry {
-            let new_pc = self.registers.pc.wrapping_add(offset as u16);
-            self.registers.pc = new_pc;
-        }
-    }
-
-    pub fn op_bcs(&mut self, offset: u8){
-        if self.flags.carry {
-            let new_pc = self.registers.pc.wrapping_add(offset as u16);
-            self.registers.pc = new_pc;
-        }
-    }
-
-    pub fn op_beq(&mut self, offset: u8){
-        if self.flags.zero {
-            let new_pc = self.registers.pc.wrapping_add(offset as u16);
-            self.registers.pc = new_pc;
-        }
-    }
-
-    pub fn op_bmi(&mut self, offset: u8){
-        if self.flags.negative {
-            let new_pc = self.registers.pc.wrapping_add(offset as u16);
-            self.registers.pc = new_pc;
-        }
-    }
-
-    pub fn op_bne(&mut self, offset: u8){
-        if !self.flags.zero {
-            let new_pc = self.registers.pc.wrapping_add(offset as u16);
-            self.registers.pc = new_pc;
-        }
-    }
-
-    pub fn op_bpl(&mut self, offset: u8){
-        if !self.flags.negative {
-            let new_pc = self.registers.pc.wrapping_add(offset as u16);
-            self.registers.pc = new_pc;
-        }
-    }
-
-    pub fn op_brk(&mut self){
-        self.stack.push(self.registers.pc + 2);
-        self.registers.sr = 1;
-        self.stack.push(self.registers.sr as u16);
-    }
-
-    pub fn op_bvc(&mut self, offset: u8){
-        if !self.flags.overflow {
-            self.registers.pc = self.registers.pc.wrapping_add(offset as u16);
-        }
-    }
-
-    pub fn op_bvs(&mut self, offset: u8){
-        if self.flags.overflow {
-            self.registers.pc = self.registers.pc.wrapping_add(offset as u16);
-        }
-    }
-
-    pub fn op_clc(&mut self){
-        self.flags.carry = false;
-    }
-
-    pub fn op_cld(&mut self){
-        self.flags.decimal = false;
-    }
-
-    pub fn op_cli(&mut self){
-        self.flags.interrupt = false;
-    }
-
-    pub fn op_clv(&mut self){
-        self.flags.overflow = false;
-    }
-
-    pub fn op_cmp(&mut self, value: u8){
-        let result = self.registers.acc.wrapping_sub(value);
-        self.flags.zero = self.registers.acc.eq(&value);
-        self.flags.negative = result & (1 << 7) != 0;
-        self.flags.carry = self.registers.acc >= value;
-    }
-
-    pub fn op_cpx(&mut self, value: u8){
-        let result = self.registers.xr.wrapping_sub(value);
-        self.flags.zero = self.registers.xr.eq(&value);
-        self.flags.negative = result & (1 << 7) != 0;
-        self.flags.carry = self.registers.xr >= value;
-    }
-
-    pub fn op_cpy(&mut self, value: u8){
-        let result = self.registers.yr.wrapping_sub(value);
-        self.flags.zero = self.registers.yr.eq(&value);
-        self.flags.negative = result & (1 << 7) != 0;
-        self.flags.carry = self.registers.yr >= value;
-    }
-
-    pub fn op_dec(&mut self, value: u8) -> u8 {
-        let result = value.wrapping_sub(1);
-        self.flags.zero = result == 0;
-        self.flags.negative = result & (1 << 7) != 0;
-
-        result
-    }
-
-    pub fn op_dex(&mut self){
-        let result = self.registers.xr.wrapping_sub(1);
-        self.flags.zero = result == 0;
-        self.flags.negative = result & (1 << 7) != 0;
-        self.registers.xr = result;
-    }
-
-    pub fn op_dey(&mut self){
-        let result = self.registers.yr.wrapping_sub(1);
-        self.flags.zero = result == 0;
-        self.flags.negative = result & (1 << 7) != 0;
-        self.registers.yr = result;
-    }
-
-    pub fn op_eor(&mut self, value: u8){
-        self.registers.acc ^= value;
-        self.flags.zero = self.registers.acc == 0;
-        self.flags.negative = self.registers.acc & (1 << 7) != 0;
-    }
-
-    pub fn op_inc(&mut self, value: u8) -> u8{
-        let mut result = value.wrapping_add(1);
-        self.flags.zero = result == 0;
-        self.flags.negative = result & (1 << 7) != 0;
-
-        result
-    }
-
-    pub fn op_inx(&mut self){
-        self.registers.xr = self.registers.xr.wrapping_add(1);
-        self.flags.zero = self.registers.xr == 0;
-        self.flags.negative = self.registers.xr & (1 << 7) != 0;
-    }
-
-    pub fn op_iny(&mut self){
-        self.registers.yr = self.registers.yr.wrapping_add(1);
-        self.flags.zero = self.registers.yr == 0;
-        self.flags.negative = self.registers.yr & (1 << 7) != 0;
-    }
-
-    pub fn op_jmp(&mut self, address: u16){
-        self.registers.pc = address;
-    }
-
-    pub fn op_jsr(&mut self, address: u16){
-        self.stack.push(self.registers.pc - 1);
-        self.registers.pc = address;
-    }
-
-    pub fn op_lda(&mut self, value: u8){
-        self.registers.acc = value;
-        self.flags.zero = self.registers.acc == 0;
-        self.flags.negative = self.registers.acc & (1 << 7) != 0;
-    }
-
-    pub fn op_ldx(&mut self, value: u8){
-        self.registers.xr = value;
-        self.flags.zero = self.registers.xr == 0;
-        self.flags.negative = self.registers.xr & (1 << 7) != 0;
-    }
-
-    pub fn op_ldy(&mut self, value: u8){
-        self.registers.yr = value;
-        self.flags.zero = self.registers.yr == 0;
-        self.flags.negative = self.registers.yr & (1 << 7) != 0;
-    }
-
-    pub fn op_lsr(&mut self, value: u8) -> u8 {
-        self.flags.carry = value & 1 != 0;
-
-        let mut result = value.wrapping_shr(1);
-        self.flags.negative = false;
-        self.flags.zero = result == 0;
-
-        result
-    }
-
-    pub fn op_ora(&mut self, value: u8){
-        self.registers.acc |= value;
-        self.flags.zero = self.registers.acc == 0;
-        self.flags.negative = self.registers.acc & (1 << 7) != 0;
-    }
-
-    pub fn op_pha(&mut self){
-        self.stack.push(self.registers.acc as u16);
-    }
-
-    pub fn op_php(&mut self){
-        self.stack.push(self.flags.to_byte() as u16);
-    }
-
-    pub fn op_pla(&mut self){
-        if let Some(result) = self.stack.pop(){
-            self.registers.acc = result as u8;
-            self.flags.zero = self.registers.acc == 0;
-            self.flags.negative = self.registers.acc & (1 << 7) != 0;
-        }
-    }
-
-    pub fn op_plp(&mut self){
-        if let Some(result) = self.stack.pop(){
-            self.flags.load_from_byte(result as u8);
-        }
-    }
-
-    pub fn op_rol(&mut self, value: u8) -> u8 {
-        self.flags.carry = value & (1 << 7) != 0;
-
-        let result = value.rotate_left(1);
-        self.flags.negative = result & (1 << 7) != 0;
-        self.flags.zero = result == 0;
-
-        result
-    }
-
-    pub fn op_ror(&mut self, value: u8) -> u8 {
-        self.flags.carry = value & 1 != 0;
-
-        let result = value.rotate_right(1);
-        self.flags.negative = result & (1 << 7) != 0;
-        self.flags.zero = result == 0;
-
-        result
-    }
-
-    pub fn op_rti(&mut self) {
-        if let Some(status) = self.stack.pop() {
-            self.flags.load_from_byte(status as u8);
-        }
-
-        if let Some(low_byte) = self.stack.pop() {
-            if let Some(high_byte) = self.stack.pop() {
-                self.registers.pc = high_byte << 8 | low_byte;
+                Some(sum as u8)
             }
+            _ => { None }
         }
     }
 
-    pub fn op_rts(&mut self) {
-        if let Some(low_byte) = self.stack.pop() {
-            if let Some(high_byte) = self.stack.pop() {
-                self.registers.pc = high_byte << 8 | low_byte;
-                self.registers.pc = self.registers.pc.wrapping_add(1);
+    pub fn op_and(&mut self, parameter: InstructionParameter) -> Option<u8> {
+        match parameter {
+            InstructionParameter::Byte(value) => {
+                let and = self.registers.acc & value;
+                self.flags.zero = and == 0;
+                self.flags.negative = is_highest_bit_set(and);
+
+                Some(and)
             }
+            _ => { None }
         }
     }
 
-    pub fn op_sbc(&mut self, value: u8) {
-        let acc = self.registers.acc as u16;
-        let value = value as u16;
-        let carry = if self.flags.carry { 1 } else { 0 };
+    pub fn op_asl(&mut self, parameter: InstructionParameter) -> Option<u8> {
+        match parameter {
+            InstructionParameter::Byte(value) => {
+                let result = value << 1;
+                self.flags.carry = value & 0x80 != 0;
+                self.flags.zero = result == 0;
+                self.flags.negative = result & 0x80 != 0;
 
-        let result = acc.wrapping_sub(value).wrapping_sub(1 - carry);
-
-        self.flags.carry = acc >= value + (1 - carry);
-        self.flags.zero = (result as u8) == 0;
-        self.flags.negative = (result as u8) & (1 << 7) != 0;
-        self.flags.overflow = (((acc ^ result) & (value ^ result)) & 0x80) != 0;
-
-        self.registers.acc = result as u8;
-    }
-
-    pub fn op_sec(&mut self) {
-        self.flags.carry = true;
-    }
-
-    pub fn op_sed(&mut self) {
-        self.flags.decimal = true;
-    }
-
-    pub fn op_sei(&mut self) {
-        self.flags.interrupt = true;
-    }
-
-    pub fn op_sta(&mut self, address: usize) {
-        if address >= self.memory.len() {
-            panic!("Memory access out of bounds");
+                Some(result)
+            }
+            _ => { None }
         }
-        self.memory[address] = self.registers.acc;
     }
 
-    pub fn op_stx(&mut self, address: usize) {
-        if address >= self.memory.len() {
-            panic!("Memory access out of bounds");
+    pub fn op_bcc(&mut self, parameter: InstructionParameter) -> Option<u8> {
+        match parameter {
+            InstructionParameter::Byte(offset) => {
+                if !self.flags.carry {
+                    let new_pc = self.registers.pc.wrapping_add(offset as u16);
+                    self.registers.pc = new_pc;
+                }
+
+                None
+            }
+            _ => { None }
         }
-        self.memory[address] = self.registers.xr;
     }
 
-    pub fn op_sty(&mut self, address: usize) {
-        if address >= self.memory.len() {
-            panic!("Memory access out of bounds");
+    pub fn op_bcs(&mut self, parameter: InstructionParameter) -> Option<u8> {
+        match parameter {
+            InstructionParameter::Byte(offset) => {
+                if self.flags.carry {
+                    let new_pc = self.registers.pc.wrapping_add(offset as u16);
+                    self.registers.pc = new_pc;
+                }
+
+                None
+            }
+            _ => { None }
         }
-        self.memory[address] = self.registers.yr;
     }
 
-    pub fn op_tax(&mut self) {
-        self.registers.xr = self.registers.acc;
-        self.flags.negative = self.registers.xr & (1 << 7) != 0;
-        self.flags.zero = self.registers.xr == 0;
+    pub fn op_beq(&mut self, parameter: InstructionParameter) -> Option<u8> {
+        match parameter {
+            InstructionParameter::Byte(offset) => {
+                if self.flags.zero {
+                    let new_pc = self.registers.pc.wrapping_add(offset as u16);
+                    self.registers.pc = new_pc;
+                }
+
+                None
+            }
+            _ => { None }
+        }
     }
 
-    pub fn op_tay(&mut self) {
-        self.registers.yr = self.registers.acc;
-        self.flags.negative = self.registers.yr & (1 << 7) != 0;
-        self.flags.zero = self.registers.yr == 0;
+
+    pub fn op_bmi(&mut self, parameter: InstructionParameter) -> Option<u8> {
+        match parameter {
+            InstructionParameter::Byte(offset) => {
+                if self.flags.negative {
+                    let new_pc = self.registers.pc.wrapping_add(offset as u16);
+                    self.registers.pc = new_pc;
+                    self.cycles += 1;
+                }
+
+                None
+
+            }
+            _ => { None }
+        }
     }
 
-    pub fn op_tsx(&mut self) {
-        self.registers.xr = self.registers.sp;
-        self.flags.negative = self.registers.xr & (1 << 7) != 0;
-        self.flags.zero = self.registers.xr == 0;
+    pub fn op_bne(&mut self, parameter: InstructionParameter) -> Option<u8> {
+        match parameter {
+            InstructionParameter::Byte(offset) => {
+                if !self.flags.zero {
+                    let new_pc = self.registers.pc.wrapping_add(offset as u16);
+                    self.registers.pc = new_pc;
+                    self.cycles += 1;
+                }
+
+                None
+            }
+            _ => { None }
+        }
     }
 
-    pub fn op_txa(&mut self) {
-        self.registers.acc = self.registers.xr;
-        self.flags.negative = self.registers.acc & (1 << 7) != 0;
-        self.flags.zero = self.registers.acc == 0;
+    pub fn op_bpl(&mut self, parameter: InstructionParameter) -> Option<u8> {
+        match parameter {
+            InstructionParameter::Byte(offset) => {
+                if !self.flags.negative {
+                    let new_pc = self.registers.pc.wrapping_add(offset as u16);
+                    self.registers.pc = new_pc;
+                    self.cycles += 1;
+                }
+
+                None
+            }
+            _ => { None }
+        }
     }
 
-    pub fn op_txs(&mut self) {
-        self.registers.sp = self.registers.xr;
+    pub fn op_brk(&mut self, parameter: InstructionParameter) -> Option<u8> {
+        match parameter {
+            InstructionParameter::None => {
+                self.push_word_to_stack(self.registers.pc + 2);
+                self.registers.sr = 1;
+                self.push_byte_to_stack(self.registers.sr);
+
+                None
+            }
+            _ => { None }
+        }
     }
 
-    pub fn op_tya(&mut self) {
-        self.registers.acc = self.registers.yr;
-        self.flags.negative = self.registers.acc & (1 << 7) != 0;
-        self.flags.zero = self.registers.acc == 0;
+    pub fn op_bvc(&mut self, parameter: InstructionParameter) -> Option<u8> {
+        match parameter {
+            InstructionParameter::Byte(offset) => {
+                if !self.flags.overflow {
+                    self.registers.pc = self.registers.pc.wrapping_add(offset as u16);
+                    self.cycles += 1;
+                }
+
+                None
+            }
+            _ => { None }
+        }
+    }
+
+    pub fn op_bvs(&mut self, parameter: InstructionParameter) -> Option<u8> {
+        match parameter {
+            InstructionParameter::Byte(offset) => {
+                if self.flags.overflow {
+                    self.registers.pc = self.registers.pc.wrapping_add(offset as u16);
+                    self.cycles += 1;
+                }
+
+                None
+            }
+            _ => { None }
+        }
+    }
+
+    pub fn op_clc(&mut self, parameter: InstructionParameter) -> Option<u8> {
+        match parameter {
+            InstructionParameter::None => {
+                self.flags.carry = false;
+
+                None
+            }
+            _ => { None }
+        }
+    }
+
+    pub fn op_cld(&mut self, parameter: InstructionParameter) -> Option<u8> {
+        match parameter {
+            InstructionParameter::None => {
+                self.flags.decimal = false;
+
+                None
+            }
+            _ => { None }
+        }
+    }
+
+    pub fn op_cli(&mut self, parameter: InstructionParameter) -> Option<u8> {
+        match parameter {
+            InstructionParameter::None => {
+                self.flags.interrupt = false;
+
+                None
+            }
+            _ => { None }
+        }
+    }
+
+    pub fn op_clv(&mut self, parameter: InstructionParameter) -> Option<u8> {
+        match parameter {
+            InstructionParameter::None => {
+                self.flags.overflow = false;
+
+                None
+            }
+            _ => { None }
+        }
+    }
+
+    pub fn op_cmp(&mut self, parameter: InstructionParameter) -> Option<u8> {
+        match parameter {
+            InstructionParameter::Byte(value) => {
+                let result = self.registers.acc.wrapping_sub(value);
+                self.flags.zero = self.registers.acc.eq(&value);
+                self.flags.negative = result & (1 << 7) != 0;
+                self.flags.carry = self.registers.acc >= value;
+
+                None
+            }
+            _ => { None }
+        }
+    }
+
+    pub fn op_cpx(&mut self, parameter: InstructionParameter) -> Option<u8> {
+        match parameter {
+            InstructionParameter::Byte(value) => {
+                let result = self.registers.xr.wrapping_sub(value);
+                self.flags.zero = self.registers.xr.eq(&value);
+                self.flags.negative = result & (1 << 7) != 0;
+                self.flags.carry = self.registers.xr >= value;
+
+                None
+            }
+            _ => { None }
+        }
+    }
+
+    pub fn op_cpy(&mut self, parameter: InstructionParameter) -> Option<u8> {
+        match parameter {
+            InstructionParameter::Byte(value) => {
+                let result = self.registers.yr.wrapping_sub(value);
+                self.flags.zero = self.registers.yr.eq(&value);
+                self.flags.negative = result & (1 << 7) != 0;
+                self.flags.carry = self.registers.yr >= value;
+
+                None
+            }
+            _ => { None }
+        }
+    }
+
+    pub fn op_dec(&mut self, parameter: InstructionParameter) -> Option<u8> {
+        match parameter {
+            InstructionParameter::Byte(value) => {
+                let result = value.wrapping_sub(1);
+                self.flags.zero = result == 0;
+                self.flags.negative = result & (1 << 7) != 0;
+
+                Some(result)
+            }
+            _ => { None }
+        }
+    }
+
+    pub fn op_dex(&mut self, parameter: InstructionParameter) -> Option<u8> {
+        match parameter {
+            InstructionParameter::None => {
+                let result = self.registers.xr.wrapping_sub(1);
+                self.flags.zero = result == 0;
+                self.flags.negative = result & (1 << 7) != 0;
+                self.registers.xr = result;
+
+                None
+            }
+            _ => { None }
+        }
+    }
+
+    pub fn op_dey(&mut self, parameter: InstructionParameter) -> Option<u8> {
+        match parameter {
+            InstructionParameter::None => {
+                let result = self.registers.yr.wrapping_sub(1);
+                self.flags.zero = result == 0;
+                self.flags.negative = result & (1 << 7) != 0;
+                self.registers.yr = result;
+
+                None
+            }
+            _ => { None }
+        }
+    }
+
+    pub fn op_eor(&mut self, parameter: InstructionParameter) -> Option<u8> {
+        match parameter {
+            InstructionParameter::Byte(value) => {
+                self.registers.acc ^= value;
+                self.flags.zero = self.registers.acc == 0;
+                self.flags.negative = self.registers.acc & (1 << 7) != 0;
+
+                None
+            }
+            _ => { None }
+        }
+    }
+
+    pub fn op_inc(&mut self, parameter: InstructionParameter) -> Option<u8>{
+        match parameter {
+            InstructionParameter::Byte(value) => {
+                let mut result = value.wrapping_add(1);
+                self.flags.zero = result == 0;
+                self.flags.negative = result & (1 << 7) != 0;
+
+                Some(result)
+            }
+            _ => { None }
+        }
+    }
+
+    pub fn op_inx(&mut self, parameter: InstructionParameter) -> Option<u8> {
+        match parameter {
+            InstructionParameter::None => {
+                self.registers.xr = self.registers.xr.wrapping_add(1);
+                self.flags.zero = self.registers.xr == 0;
+                self.flags.negative = self.registers.xr & (1 << 7) != 0;
+
+                None
+            }
+            _ => { None }
+        }
+    }
+
+    pub fn op_iny(&mut self, parameter: InstructionParameter) -> Option<u8> {
+        match parameter {
+            InstructionParameter::None => {
+                self.registers.yr = self.registers.yr.wrapping_add(1);
+                self.flags.zero = self.registers.yr == 0;
+                self.flags.negative = self.registers.yr & (1 << 7) != 0;
+
+                None
+            }
+            _ => { None }
+        }
+    }
+
+    pub fn op_jmp(&mut self, parameter: InstructionParameter) -> Option<u8> {
+        match parameter {
+            InstructionParameter::Word(address) => {
+                self.registers.pc = address;
+
+                None
+            }
+            _ => { None }
+        }
+    }
+
+    pub fn op_jsr(&mut self, parameter: InstructionParameter) -> Option<u8> {
+        match parameter {
+            InstructionParameter::Word(address) => {
+                self.push_word_to_stack(self.registers.pc - 1);
+                self.registers.pc = address;
+
+                None
+            }
+            _ => { None }
+        }
+    }
+
+    pub fn op_lda(&mut self, parameter: InstructionParameter) -> Option<u8> {
+        match parameter {
+            InstructionParameter::Byte(value) => {
+                self.registers.acc = value;
+                self.flags.zero = self.registers.acc == 0;
+                self.flags.negative = self.registers.acc & (1 << 7) != 0;
+
+                None
+            }
+            _ => { None }
+        }
+    }
+
+    pub fn op_ldx(&mut self, parameter: InstructionParameter) -> Option<u8> {
+        match parameter {
+            InstructionParameter::Byte(value) => {
+                self.registers.xr = value;
+                self.flags.zero = self.registers.xr == 0;
+                self.flags.negative = self.registers.xr & (1 << 7) != 0;
+
+                None
+            }
+            _ => { None }
+        }
+
+    }
+
+    pub fn op_ldy(&mut self, parameter: InstructionParameter) -> Option<u8> {
+        match parameter {
+            InstructionParameter::Byte(value) => {
+                self.registers.yr = value;
+                self.flags.zero = self.registers.yr == 0;
+                self.flags.negative = self.registers.yr & (1 << 7) != 0;
+
+                None
+            }
+            _ => { None }
+        }
+    }
+
+    pub fn op_lsr(&mut self, parameter: InstructionParameter) -> Option<u8> {
+        match parameter {
+            InstructionParameter::Byte(value) => {
+                self.flags.carry = value & 1 != 0;
+
+                let mut result = value.wrapping_shr(1);
+                self.flags.negative = false;
+                self.flags.zero = result == 0;
+
+                Some(result)
+            }
+            _ => { None }
+        }
+    }
+
+    pub fn op_ora(&mut self, parameter: InstructionParameter) -> Option<u8> {
+        match parameter {
+            InstructionParameter::Byte(value) => {
+                self.registers.acc |= value;
+                self.flags.zero = self.registers.acc == 0;
+                self.flags.negative = self.registers.acc & (1 << 7) != 0;
+
+                None
+            }
+            _ => { None }
+        }
+    }
+
+    pub fn op_pha(&mut self, parameter: InstructionParameter) -> Option<u8> {
+        match parameter {
+            InstructionParameter::None => {
+                self.push_byte_to_stack(self.registers.acc);
+
+                None
+            }
+            _ => { None }
+        }
+    }
+
+    pub fn op_php(&mut self, parameter: InstructionParameter) -> Option<u8> {
+        match parameter {
+            InstructionParameter::None => {
+                self.push_byte_to_stack(self.flags.to_byte());
+
+                None
+            }
+            _ => { None }
+        }
+    }
+
+    pub fn op_pla(&mut self, parameter: InstructionParameter) -> Option<u8> {
+        match parameter {
+            InstructionParameter::None => {
+                if let Some(result) = self.pop_byte_from_stack(){
+                    self.registers.acc = result as u8;
+                    self.flags.zero = self.registers.acc == 0;
+                    self.flags.negative = self.registers.acc & (1 << 7) != 0;
+                }
+
+                None
+            }
+            _ => { None }
+        }
+    }
+
+    pub fn op_plp(&mut self, parameter: InstructionParameter) -> Option<u8> {
+        match parameter {
+            InstructionParameter::None => {
+                if let Some(result) = self.pop_byte_from_stack(){
+                    self.flags.load_from_byte(result);
+                }
+
+                None
+            }
+            _ => { None }
+        }
+    }
+
+    pub fn op_rol(&mut self, parameter: InstructionParameter) -> Option<u8> {
+        match parameter {
+            InstructionParameter::Byte(value) => {
+                self.flags.carry = value & (1 << 7) != 0;
+
+                let result = value.rotate_left(1);
+                self.flags.negative = result & (1 << 7) != 0;
+                self.flags.zero = result == 0;
+
+                Some(result)
+            }
+            _ => { None }
+        }
+    }
+
+    pub fn op_ror(&mut self, parameter: InstructionParameter) -> Option<u8> {
+        match parameter {
+            InstructionParameter::Byte(value) => {
+                self.flags.carry = value & 1 != 0;
+
+                let result = value.rotate_right(1);
+                self.flags.negative = result & (1 << 7) != 0;
+                self.flags.zero = result == 0;
+
+                Some(result)
+            }
+            _ => { None }
+        }
+    }
+
+    pub fn op_rti(&mut self, parameter: InstructionParameter) -> Option<u8> {
+        match parameter {
+            InstructionParameter::None => {
+                if let Some(status) = self.pop_byte_from_stack() {
+                    self.flags.load_from_byte(status as u8);
+                }
+
+                if let Some(value) = self.pop_word_from_stack() {
+                    self.registers.pc = value;
+                }
+
+                None
+            }
+            _ => { None }
+        }
+    }
+
+    pub fn op_rts(&mut self, parameter: InstructionParameter) -> Option<u8> {
+        match parameter {
+            InstructionParameter::None => {
+                if let Some(value) = self.pop_word_from_stack() {
+                    self.registers.pc = value;
+                    self.registers.pc = self.registers.pc.wrapping_add(1);
+                }
+
+                None
+            }
+            _ => { None }
+        }
+    }
+
+    pub fn op_sbc(&mut self, parameter: InstructionParameter) -> Option<u8> {
+        match parameter {
+            InstructionParameter::Byte(value) => {
+                let acc = self.registers.acc as u16;
+                let value = value as u16;
+                let carry = if self.flags.carry { 1 } else { 0 };
+
+                let result = acc.wrapping_sub(value).wrapping_sub(1 - carry);
+
+                self.flags.carry = acc >= value + (1 - carry);
+                self.flags.zero = (result as u8) == 0;
+                self.flags.negative = (result as u8) & (1 << 7) != 0;
+                self.flags.overflow = (((acc ^ result) & (value ^ result)) & 0x80) != 0;
+
+                self.registers.acc = result as u8;
+
+                None
+            }
+            _ => { None }
+        }
+    }
+
+    pub fn op_sec(&mut self, parameter: InstructionParameter) -> Option<u8> {
+        match parameter {
+            InstructionParameter::None => {
+                self.flags.carry = true;
+
+                None
+            }
+            _ => { None }
+        }
+    }
+
+    pub fn op_sed(&mut self, parameter: InstructionParameter) -> Option<u8> {
+        match parameter {
+            InstructionParameter::None => {
+                self.flags.decimal = true;
+
+                None
+            }
+            _ => { None }
+        }
+    }
+
+    pub fn op_sei(&mut self, parameter: InstructionParameter) -> Option<u8> {
+        match parameter {
+            InstructionParameter::None => {
+                self.flags.interrupt = true;
+
+                None
+            }
+            _ => { None }
+        }
+    }
+
+    pub fn op_sta(&mut self, parameter: InstructionParameter) -> Option<u8> {
+        match parameter {
+            InstructionParameter::Word(address) => {
+                if address >= self.memory.len() as u16 {
+                    panic!("Memory access out of bounds");
+                }
+                self.memory[address as usize] = self.registers.acc;
+
+                None
+            }
+            _ => { None }
+        }
+    }
+
+    pub fn op_stx(&mut self, parameter: InstructionParameter) -> Option<u8> {
+        match parameter {
+            InstructionParameter::Word(address) => {
+                if address >= self.memory.len() as u16 {
+                    panic!("Memory access out of bounds");
+                }
+                self.memory[address as usize] = self.registers.xr;
+
+                None
+            }
+            _ => { None }
+        }
+    }
+
+    pub fn op_sty(&mut self, parameter: InstructionParameter) -> Option<u8> {
+        match parameter {
+            InstructionParameter::Word(address) => {
+                if address >= self.memory.len() as u16 {
+                    panic!("Memory access out of bounds");
+                }
+                self.memory[address as usize] = self.registers.yr;
+
+                None
+            }
+            _ => { None }
+        }
+    }
+
+    pub fn op_tax(&mut self, parameter: InstructionParameter) -> Option<u8> {
+        match parameter {
+            InstructionParameter::None => {
+                self.registers.xr = self.registers.acc;
+                self.flags.negative = self.registers.xr & (1 << 7) != 0;
+                self.flags.zero = self.registers.xr == 0;
+
+                None
+            }
+            _ => { None }
+        }
+    }
+
+    pub fn op_tay(&mut self, parameter: InstructionParameter) -> Option<u8> {
+        match parameter {
+            InstructionParameter::None => {
+                self.registers.yr = self.registers.acc;
+                self.flags.negative = self.registers.yr & (1 << 7) != 0;
+                self.flags.zero = self.registers.yr == 0;
+
+                None
+            }
+            _ => { None }
+        }
+    }
+
+    pub fn op_tsx(&mut self, parameter: InstructionParameter) -> Option<u8> {
+        match parameter {
+            InstructionParameter::None => {
+                self.registers.xr = self.registers.sp;
+                self.flags.negative = self.registers.xr & (1 << 7) != 0;
+                self.flags.zero = self.registers.xr == 0;
+
+                None
+            }
+            _ => { None }
+        }
+    }
+
+    pub fn op_txa(&mut self, parameter: InstructionParameter) -> Option<u8> {
+        match parameter {
+            InstructionParameter::None => {
+                self.registers.acc = self.registers.xr;
+                self.flags.negative = self.registers.acc & (1 << 7) != 0;
+                self.flags.zero = self.registers.acc == 0;
+
+                None
+            }
+            _ => { None }
+        }
+    }
+
+    pub fn op_txs(&mut self, parameter: InstructionParameter) -> Option<u8> {
+        match parameter {
+            InstructionParameter::None => {
+                self.registers.sp = self.registers.xr;
+
+                None
+            }
+            _ => { None }
+        }
+    }
+
+    pub fn op_tya(&mut self, parameter: InstructionParameter) -> Option<u8> {
+        match parameter {
+            InstructionParameter::None => {
+                self.registers.acc = self.registers.yr;
+                self.flags.negative = self.registers.acc & (1 << 7) != 0;
+                self.flags.zero = self.registers.acc == 0;
+
+                None
+            }
+            _ => { None }
+        }
     }
 }
