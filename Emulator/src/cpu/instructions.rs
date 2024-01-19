@@ -1,10 +1,15 @@
 use crate::cpu::cpu::CPU;
-use crate::cpu::instructions::AddressingMode::Immediate;
+use crate::helpers::addressing::page_crossed;
 
 pub enum InstructionParameter {
     None,
     Byte(u8),
     Word(u16),
+}
+
+pub enum ValueOrAddress{
+    Value,
+    Address
 }
 
 type InstructionFn = fn(&mut CPU, val: InstructionParameter) -> Option<u8>;
@@ -31,6 +36,7 @@ pub struct Instruction {
     pub address_mode: AddressingMode,
     pub operation: InstructionFn,
     pub result_handler: ResultHandlerFn,
+    pub value_or_address: ValueOrAddress,
     pub cycle_increase: u32,
     pub cycle_increases_on_page_cross: bool
 }
@@ -80,11 +86,19 @@ impl CPU {
             }
             AddressingMode::Absolute => {
                 let address = self.get_next_word(&mut bytes);
-                let stored = *self.memory.get(address as usize).unwrap_or_else(|| {
-                    panic!("Memory out of bounds")
-                }) as u16;
-                let result = (instruction.operation)(self, InstructionParameter::Word(stored));
-                (instruction.result_handler)(self, result, None);
+                match instruction.value_or_address {
+                    ValueOrAddress::Value => {
+                        let stored = *self.memory.get(address as usize).unwrap_or_else(|| {
+                            panic!("Memory out of bounds")
+                        }) as u16;
+                        let result = (instruction.operation)(self, InstructionParameter::Word(stored));
+                        (instruction.result_handler)(self, result, None);
+                    }
+                    ValueOrAddress::Address => {
+                        let result = (instruction.operation)(self, InstructionParameter::Word(address));
+                        (instruction.result_handler)(self, result, None);
+                    }
+                }
 
                 self.cycles += instruction.cycle_increase
             }
@@ -96,107 +110,82 @@ impl CPU {
                 let stored = *self.memory.get(final_address as usize).unwrap_or_else(|| {
                     panic!("Memory out of bounds")
                 });
-                let result = (instruction.operation)(self, InstructionParameter::Byte(stored));
-                (instruction.result_handler)(self, result, Some(final_address));
 
+                self.handle_instruction(instruction, final_address, stored);
                 self.cycles += instruction.cycle_increase
             }
             AddressingMode::XIndexedAbsolute => {
                 let address = self.get_next_word(&mut bytes);
-                let (stored, final_address) = self.handle_x_indexed_absolute(address, instruction.cycle_increase, instruction.cycle_increases_on_page_cross);
-                let result = (instruction.operation)(self, InstructionParameter::Byte(stored));
-                (instruction.result_handler)(self, result, Some(final_address));
+                let (stored, page_crossed, final_address) = self.index_absolute_indexed(address, self.registers.xr);
+                self.handle_instruction(instruction, final_address, stored);
+                self.cycles += instruction.cycle_increase + ((instruction.cycle_increases_on_page_cross && page_crossed) as u32);
             }
             AddressingMode::YIndexedAbsolute => {
                 let address = self.get_next_word(&mut bytes);
-                let (stored, final_address) = self.handle_y_indexed_absolute(address, instruction.cycle_increase, instruction.cycle_increases_on_page_cross);
-                let result = (instruction.operation)(self, InstructionParameter::Byte(stored));
-                (instruction.result_handler)(self, result, Some(final_address));
+                let (stored, page_crossed, final_address) = self.index_absolute_indexed(address, self.registers.yr);
+                self.handle_instruction(instruction, final_address, stored);
+                self.cycles += instruction.cycle_increase + ((instruction.cycle_increases_on_page_cross && page_crossed) as u32);
             }
             AddressingMode::ZeroPage => {
-                let value = self.get_next_byte(&mut bytes);
-                let (stored, final_address) = self.handle_zero_paged(value, instruction.cycle_increase);
-                let result = (instruction.operation)(self, InstructionParameter::Byte(stored));
-                (instruction.result_handler)(self, result, Some(final_address));
+                let address = self.get_next_byte(&mut bytes);
+                match instruction.value_or_address {
+                    ValueOrAddress::Value => {
+                        let stored = self.index_zero_page(address);
+                        let result = (instruction.operation)(self, InstructionParameter::Byte(stored));
+                        (instruction.result_handler)(self, result, Some(address as u16));
+                    }
+                    ValueOrAddress::Address => {
+                        let result = (instruction.operation)(self, InstructionParameter::Word(address as u16));
+                        (instruction.result_handler)(self, result, Some(address as u16));
+                    }
+                }
+
+                self.cycles += instruction.cycle_increase;
             }
             AddressingMode::XIndexedZeroPage => {
-                let value = self.get_next_byte(&mut bytes);
-                let (stored, final_address) = self.handle_x_indexed_zero_paged(value, instruction.cycle_increase);
-                let result = (instruction.operation)(self, InstructionParameter::Byte(stored));
-                (instruction.result_handler)(self, result, Some(final_address));
+                let address = self.get_next_byte(&mut bytes);
+                let (stored, final_address) = self.index_zero_page_indexed(address, self.registers.xr);
+                self.handle_instruction(instruction, final_address, stored);
+                self.cycles += instruction.cycle_increase;
             }
             AddressingMode::YIndexedZeroPage => {
-                let value = self.get_next_byte(&mut bytes);
-                let (stored, final_address) = self.handle_y_indexed_zero_paged(value, instruction.cycle_increase);
-                let result = (instruction.operation)(self, InstructionParameter::Byte(stored));
-                (instruction.result_handler)(self, result, Some(final_address));
+                let address = self.get_next_byte(&mut bytes);
+                let (stored, final_address) = self.index_zero_page_indexed(address, self.registers.yr);
+                self.handle_instruction(instruction, final_address, stored);
+                self.cycles += instruction.cycle_increase;
             }
             AddressingMode::XIndexedZeroPageIndirect => {
-                let value = self.get_next_byte(&mut bytes);
-                let (stored, final_address) = self.handle_x_indexed_zero_paged_indirect(value, instruction.cycle_increase);
-                let result = (instruction.operation)(self, InstructionParameter::Byte(stored));
-                (instruction.result_handler)(self, result, Some(final_address));
+                let address = self.get_next_byte(&mut bytes);
+                let (stored, final_address) = self.index_zero_paged_indexed_indirect(address, self.registers.xr);
+                self.handle_instruction(instruction, final_address, stored);
+                self.cycles += instruction.cycle_increase;
             }
             AddressingMode::ZeroPageIndirectYIndexed => {
-                let value = self.get_next_byte(&mut bytes);
-                let (stored, final_address) = self.handle_zero_paged_indirect_y_indexed(value, instruction.cycle_increase, instruction.cycle_increases_on_page_cross);
-                let result = (instruction.operation)(self, InstructionParameter::Byte(stored));
-                (instruction.result_handler)(self, result, Some(final_address));
+                let address = self.get_next_byte(&mut bytes);
+                let (stored, page_crossed, final_address) = self.index_zero_paged_indirect_indexed(address, self.registers.yr);
+                self.handle_instruction(instruction, final_address, stored);
+                self.cycles += instruction.cycle_increase + ((instruction.cycle_increases_on_page_cross && page_crossed) as u32);
             }
             AddressingMode::Relative => {
                 let value = self.get_next_byte(&mut bytes);
                 (instruction.operation)(self, InstructionParameter::Word(value as u16));
                 (instruction.result_handler)(self, None, None);
+
+                self.cycles += instruction.cycle_increase + ((instruction.cycle_increases_on_page_cross && page_crossed(self.registers.pc, value as u16)) as u32);
             }
         }
     }
 
-    pub fn handle_x_indexed_absolute(&mut self, address: u16, cycle_increase: u32, cycle_increase_on_page_cross: bool) -> (u8, u16) {
-        let (value, page_crossed, final_address) = self.index_absolute_indexed(address, self.registers.xr);
-        self.cycles += cycle_increase + ((cycle_increase_on_page_cross && page_crossed) as u32);
-
-        (value, final_address)
-    }
-
-    pub fn handle_y_indexed_absolute(&mut self, address: u16, cycle_increase: u32, cycle_increase_on_page_cross: bool) -> (u8, u16) {
-        let (value, page_crossed, final_address) = self.index_absolute_indexed(address, self.registers.yr);
-        self.cycles += cycle_increase + ((cycle_increase_on_page_cross && page_crossed) as u32);
-
-        (value, final_address)
-    }
-
-    pub fn handle_zero_paged(&mut self, address: u8, cycle_increase: u32) -> (u8, u16) {
-        let value = self.index_zero_page(address);
-        self.cycles += cycle_increase;
-
-        (value, address as u16)
-    }
-
-    pub fn handle_x_indexed_zero_paged(&mut self, address: u8, cycle_increase: u32) -> (u8, u16) {
-        let (value, final_address) = self.index_zero_page_indexed(address, self.registers.xr);
-        self.cycles += cycle_increase;
-
-        (value, final_address)
-    }
-
-    pub fn handle_y_indexed_zero_paged(&mut self, address: u8, cycle_increase: u32) -> (u8, u16) {
-        let (value, final_address) = self.index_zero_page_indexed(address, self.registers.yr);
-        self.cycles += cycle_increase;
-
-        (value, final_address)
-    }
-
-    pub fn handle_x_indexed_zero_paged_indirect(&mut self, address: u8, cycle_increase: u32) -> (u8, u16) {
-        let (value, final_address) = self.index_zero_paged_indexed_indirect(address, self.registers.xr);
-        self.cycles += cycle_increase;
-
-        (value, final_address)
-    }
-
-    pub fn handle_zero_paged_indirect_y_indexed(&mut self, address: u8, cycle_increase: u32, cycle_increase_on_page_cross: bool) -> (u8, u16) {
-        let (value, page_crossed, final_address) = self.index_zero_paged_indirect_indexed(address, self.registers.yr);
-        self.cycles += cycle_increase + ((cycle_increase_on_page_cross && page_crossed) as u32);
-
-        (value, final_address)
+    pub fn handle_instruction(&mut self, instruction: &Instruction, address: u16, value: u8){
+        match instruction.value_or_address {
+            ValueOrAddress::Value => {
+                let result = (instruction.operation)(self, InstructionParameter::Byte(value));
+                (instruction.result_handler)(self, result, Some(address));
+            }
+            ValueOrAddress::Address => {
+                let result = (instruction.operation)(self, InstructionParameter::Word(address));
+                (instruction.result_handler)(self, result, Some(address));
+            }
+        }
     }
 }

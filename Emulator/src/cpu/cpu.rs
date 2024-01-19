@@ -204,7 +204,7 @@ impl CPU{
                 if !self.flags.zero {
                     let new_pc = self.registers.pc.wrapping_add(offset as i16 as u16);
                     self.registers.pc = new_pc;
-                    self.cycles += 1 + (page_crossed as u32);
+                    self.cycles += 1;
                 }
 
                 None
@@ -707,14 +707,6 @@ impl CPU{
 
     pub fn op_sta(&mut self, parameter: InstructionParameter) -> Option<u8> {
         match parameter {
-            InstructionParameter::Byte(address) => {
-                if (address as usize) >= self.memory.len() {
-                    panic!("Memory access out of bounds");
-                }
-                self.memory[address as usize] = self.registers.acc;
-
-                None
-            }
             InstructionParameter::Word(address) => {
                 if (address as usize) >= self.memory.len() {
                     panic!("Memory access out of bounds");
@@ -729,14 +721,6 @@ impl CPU{
 
     pub fn op_stx(&mut self, parameter: InstructionParameter) -> Option<u8> {
         match parameter {
-            InstructionParameter::Byte(address) => {
-                if (address as usize) >= self.memory.len() {
-                    panic!("Memory access out of bounds");
-                }
-                self.memory[address as usize] = self.registers.xr;
-
-                None
-            }
             InstructionParameter::Word(address) => {
                 if (address as usize) >= self.memory.len() {
                     panic!("Memory access out of bounds");
@@ -751,14 +735,6 @@ impl CPU{
 
     pub fn op_sty(&mut self, parameter: InstructionParameter) -> Option<u8> {
         match parameter {
-            InstructionParameter::Byte(address) => {
-                if (address as usize) >= self.memory.len() {
-                    panic!("Memory access out of bounds");
-                }
-                self.memory[address as usize] = self.registers.yr;
-
-                None
-            }
             InstructionParameter::Word(address) => {
                 if (address as usize) >= self.memory.len() {
                     panic!("Memory access out of bounds");

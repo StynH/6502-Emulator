@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use crate::cpu::cpu::CPU;
 use crate::cpu::instructions::{AddressingMode, Instruction};
+use crate::cpu::instructions::ValueOrAddress::{Address, Value};
 
 impl CPU{
 
@@ -11,6 +12,7 @@ impl CPU{
                 address_mode: AddressingMode::Immediate,
                 operation: CPU::op_adc,
                 result_handler: CPU::result_into_acc,
+                value_or_address: Value,
                 cycle_increase: 2,
                 cycle_increases_on_page_cross: false
             }),
@@ -18,6 +20,7 @@ impl CPU{
                 address_mode: AddressingMode::Absolute,
                 operation: CPU::op_adc,
                 result_handler: CPU::result_into_acc,
+                value_or_address: Value,
                 cycle_increase: 4,
                 cycle_increases_on_page_cross: false
             }),
@@ -25,6 +28,7 @@ impl CPU{
                 address_mode: AddressingMode::XIndexedAbsolute,
                 operation: CPU::op_adc,
                 result_handler: CPU::result_into_acc,
+                value_or_address: Value,
                 cycle_increase: 4,
                 cycle_increases_on_page_cross: true
             }),
@@ -32,6 +36,7 @@ impl CPU{
                 address_mode: AddressingMode::YIndexedAbsolute,
                 operation: CPU::op_adc,
                 result_handler: CPU::result_into_acc,
+                value_or_address: Value,
                 cycle_increase: 4,
                 cycle_increases_on_page_cross: true
             }),
@@ -39,6 +44,7 @@ impl CPU{
                 address_mode: AddressingMode::ZeroPage,
                 operation: CPU::op_adc,
                 result_handler: CPU::result_into_acc,
+                value_or_address: Value,
                 cycle_increase: 3,
                 cycle_increases_on_page_cross: false
             }),
@@ -46,6 +52,7 @@ impl CPU{
                 address_mode: AddressingMode::XIndexedZeroPage,
                 operation: CPU::op_adc,
                 result_handler: CPU::result_into_acc,
+                value_or_address: Value,
                 cycle_increase: 4,
                 cycle_increases_on_page_cross: false
             }),
@@ -53,6 +60,7 @@ impl CPU{
                 address_mode: AddressingMode::XIndexedZeroPageIndirect,
                 operation: CPU::op_adc,
                 result_handler: CPU::result_into_acc,
+                value_or_address: Value,
                 cycle_increase: 6,
                 cycle_increases_on_page_cross: false
             }),
@@ -60,6 +68,7 @@ impl CPU{
                 address_mode: AddressingMode::ZeroPageIndirectYIndexed,
                 operation: CPU::op_adc,
                 result_handler: CPU::result_into_acc,
+                value_or_address: Value,
                 cycle_increase: 5,
                 cycle_increases_on_page_cross: true
             }),
@@ -69,6 +78,7 @@ impl CPU{
                 address_mode: AddressingMode::Immediate,
                 operation: CPU::op_and,
                 result_handler: CPU::result_into_acc,
+                value_or_address: Value,
                 cycle_increase: 2,
                 cycle_increases_on_page_cross: false
             }),
@@ -76,6 +86,7 @@ impl CPU{
                 address_mode: AddressingMode::Absolute,
                 operation: CPU::op_and,
                 result_handler: CPU::result_into_acc,
+                value_or_address: Value,
                 cycle_increase: 4,
                 cycle_increases_on_page_cross: false
             }),
@@ -83,6 +94,7 @@ impl CPU{
                 address_mode: AddressingMode::XIndexedAbsolute,
                 operation: CPU::op_and,
                 result_handler: CPU::result_into_acc,
+                value_or_address: Value,
                 cycle_increase: 4,
                 cycle_increases_on_page_cross: true
             }),
@@ -90,6 +102,7 @@ impl CPU{
                 address_mode: AddressingMode::YIndexedAbsolute,
                 operation: CPU::op_and,
                 result_handler: CPU::result_into_acc,
+                value_or_address: Value,
                 cycle_increase: 4,
                 cycle_increases_on_page_cross: true
             }),
@@ -97,6 +110,7 @@ impl CPU{
                 address_mode: AddressingMode::ZeroPage,
                 operation: CPU::op_and,
                 result_handler: CPU::result_into_acc,
+                value_or_address: Value,
                 cycle_increase: 3,
                 cycle_increases_on_page_cross: false
             }),
@@ -104,6 +118,7 @@ impl CPU{
                 address_mode: AddressingMode::XIndexedZeroPage,
                 operation: CPU::op_and,
                 result_handler: CPU::result_into_acc,
+                value_or_address: Value,
                 cycle_increase: 4,
                 cycle_increases_on_page_cross: false
             }),
@@ -111,6 +126,7 @@ impl CPU{
                 address_mode: AddressingMode::XIndexedZeroPageIndirect,
                 operation: CPU::op_and,
                 result_handler: CPU::result_into_acc,
+                value_or_address: Value,
                 cycle_increase: 6,
                 cycle_increases_on_page_cross: false
             }),
@@ -118,6 +134,7 @@ impl CPU{
                 address_mode: AddressingMode::ZeroPageIndirectYIndexed,
                 operation: CPU::op_and,
                 result_handler: CPU::result_into_acc,
+                value_or_address: Value,
                 cycle_increase: 5,
                 cycle_increases_on_page_cross: true
             }),
@@ -127,6 +144,7 @@ impl CPU{
                 address_mode: AddressingMode::Accumulator,
                 operation: CPU::op_asl,
                 result_handler: CPU::result_into_acc,
+                value_or_address: Value,
                 cycle_increase: 2,
                 cycle_increases_on_page_cross: false
             }),
@@ -134,6 +152,7 @@ impl CPU{
                 address_mode: AddressingMode::Absolute,
                 operation: CPU::op_asl,
                 result_handler: CPU::result_into_acc,
+                value_or_address: Value,
                 cycle_increase: 6,
                 cycle_increases_on_page_cross: false
             }),
@@ -141,6 +160,7 @@ impl CPU{
                 address_mode: AddressingMode::XIndexedAbsolute,
                 operation: CPU::op_asl,
                 result_handler: CPU::result_into_acc,
+                value_or_address: Value,
                 cycle_increase: 7,
                 cycle_increases_on_page_cross: false
             }),
@@ -148,6 +168,7 @@ impl CPU{
                 address_mode: AddressingMode::ZeroPage,
                 operation: CPU::op_asl,
                 result_handler: CPU::result_into_acc,
+                value_or_address: Value,
                 cycle_increase: 5,
                 cycle_increases_on_page_cross: false
             }),
@@ -155,6 +176,7 @@ impl CPU{
                 address_mode: AddressingMode::XIndexedZeroPage,
                 operation: CPU::op_asl,
                 result_handler: CPU::result_into_acc,
+                value_or_address: Value,
                 cycle_increase: 6,
                 cycle_increases_on_page_cross: false
             }),
@@ -164,6 +186,7 @@ impl CPU{
                 address_mode: AddressingMode::Relative,
                 operation: CPU::op_bcc,
                 result_handler: CPU::no_handler,
+                value_or_address: Value,
                 cycle_increase: 2,
                 cycle_increases_on_page_cross: true
             }),
@@ -173,6 +196,7 @@ impl CPU{
                 address_mode: AddressingMode::Relative,
                 operation: CPU::op_bcs,
                 result_handler: CPU::no_handler,
+                value_or_address: Value,
                 cycle_increase: 2,
                 cycle_increases_on_page_cross: true
             }),
@@ -182,6 +206,7 @@ impl CPU{
                 address_mode: AddressingMode::Relative,
                 operation: CPU::op_beq,
                 result_handler: CPU::no_handler,
+                value_or_address: Value,
                 cycle_increase: 2,
                 cycle_increases_on_page_cross: true
             }),
@@ -191,6 +216,7 @@ impl CPU{
                 address_mode: AddressingMode::Absolute,
                 operation: CPU::op_bit,
                 result_handler: CPU::no_handler,
+                value_or_address: Value,
                 cycle_increase: 4,
                 cycle_increases_on_page_cross: false
             }),
@@ -198,6 +224,7 @@ impl CPU{
                 address_mode: AddressingMode::ZeroPage,
                 operation: CPU::op_bit,
                 result_handler: CPU::no_handler,
+                value_or_address: Value,
                 cycle_increase: 3,
                 cycle_increases_on_page_cross: false
             }),
@@ -207,6 +234,7 @@ impl CPU{
                 address_mode: AddressingMode::Relative,
                 operation: CPU::op_bmi,
                 result_handler: CPU::no_handler,
+                value_or_address: Value,
                 cycle_increase: 2,
                 cycle_increases_on_page_cross: true
             }),
@@ -216,6 +244,7 @@ impl CPU{
                 address_mode: AddressingMode::Relative,
                 operation: CPU::op_bne,
                 result_handler: CPU::no_handler,
+                value_or_address: Value,
                 cycle_increase: 2,
                 cycle_increases_on_page_cross: true
             }),
@@ -225,6 +254,7 @@ impl CPU{
                 address_mode: AddressingMode::Relative,
                 operation: CPU::op_bpl,
                 result_handler: CPU::no_handler,
+                value_or_address: Value,
                 cycle_increase: 2,
                 cycle_increases_on_page_cross: true
             }),
@@ -234,6 +264,7 @@ impl CPU{
                 address_mode: AddressingMode::Implied,
                 operation: CPU::op_brk,
                 result_handler: CPU::no_handler,
+                value_or_address: Value,
                 cycle_increase: 7,
                 cycle_increases_on_page_cross: false
             }),
@@ -243,6 +274,7 @@ impl CPU{
                 address_mode: AddressingMode::Relative,
                 operation: CPU::op_bvc,
                 result_handler: CPU::no_handler,
+                value_or_address: Value,
                 cycle_increase: 2,
                 cycle_increases_on_page_cross: true
             }),
@@ -252,6 +284,7 @@ impl CPU{
                 address_mode: AddressingMode::Relative,
                 operation: CPU::op_bvs,
                 result_handler: CPU::no_handler,
+                value_or_address: Value,
                 cycle_increase: 2,
                 cycle_increases_on_page_cross: true
             }),
@@ -261,6 +294,7 @@ impl CPU{
                 address_mode: AddressingMode::Implied,
                 operation: CPU::op_clc,
                 result_handler: CPU::no_handler,
+                value_or_address: Value,
                 cycle_increase: 2,
                 cycle_increases_on_page_cross: false
             }),
@@ -270,6 +304,7 @@ impl CPU{
                 address_mode: AddressingMode::Implied,
                 operation: CPU::op_cld,
                 result_handler: CPU::no_handler,
+                value_or_address: Value,
                 cycle_increase: 2,
                 cycle_increases_on_page_cross: false
             }),
@@ -279,6 +314,7 @@ impl CPU{
                 address_mode: AddressingMode::Implied,
                 operation: CPU::op_clv,
                 result_handler: CPU::no_handler,
+                value_or_address: Value,
                 cycle_increase: 2,
                 cycle_increases_on_page_cross: false
             }),
@@ -288,6 +324,7 @@ impl CPU{
                 address_mode: AddressingMode::Immediate,
                 operation: CPU::op_cmp,
                 result_handler: CPU::no_handler,
+                value_or_address: Value,
                 cycle_increase: 2,
                 cycle_increases_on_page_cross: false
             }),
@@ -295,6 +332,7 @@ impl CPU{
                 address_mode: AddressingMode::Absolute,
                 operation: CPU::op_cmp,
                 result_handler: CPU::no_handler,
+                value_or_address: Value,
                 cycle_increase: 4,
                 cycle_increases_on_page_cross: false
             }),
@@ -302,6 +340,7 @@ impl CPU{
                 address_mode: AddressingMode::XIndexedAbsolute,
                 operation: CPU::op_cmp,
                 result_handler: CPU::no_handler,
+                value_or_address: Value,
                 cycle_increase: 4,
                 cycle_increases_on_page_cross: true
             }),
@@ -309,6 +348,7 @@ impl CPU{
                 address_mode: AddressingMode::YIndexedAbsolute,
                 operation: CPU::op_cmp,
                 result_handler: CPU::no_handler,
+                value_or_address: Value,
                 cycle_increase: 4,
                 cycle_increases_on_page_cross: true
             }),
@@ -316,6 +356,7 @@ impl CPU{
                 address_mode: AddressingMode::ZeroPage,
                 operation: CPU::op_cmp,
                 result_handler: CPU::no_handler,
+                value_or_address: Value,
                 cycle_increase: 3,
                 cycle_increases_on_page_cross: false
             }),
@@ -323,6 +364,7 @@ impl CPU{
                 address_mode: AddressingMode::XIndexedZeroPage,
                 operation: CPU::op_cmp,
                 result_handler: CPU::no_handler,
+                value_or_address: Value,
                 cycle_increase: 4,
                 cycle_increases_on_page_cross: false
             }),
@@ -330,6 +372,7 @@ impl CPU{
                 address_mode: AddressingMode::XIndexedZeroPageIndirect,
                 operation: CPU::op_cmp,
                 result_handler: CPU::no_handler,
+                value_or_address: Value,
                 cycle_increase: 6,
                 cycle_increases_on_page_cross: false
             }),
@@ -337,6 +380,7 @@ impl CPU{
                 address_mode: AddressingMode::ZeroPageIndirectYIndexed,
                 operation: CPU::op_cmp,
                 result_handler: CPU::no_handler,
+                value_or_address: Value,
                 cycle_increase: 5,
                 cycle_increases_on_page_cross: true
             }),
@@ -346,6 +390,7 @@ impl CPU{
                 address_mode: AddressingMode::Immediate,
                 operation: CPU::op_cpx,
                 result_handler: CPU::no_handler,
+                value_or_address: Value,
                 cycle_increase: 2,
                 cycle_increases_on_page_cross: false
             }),
@@ -353,6 +398,7 @@ impl CPU{
                 address_mode: AddressingMode::Absolute,
                 operation: CPU::op_cpx,
                 result_handler: CPU::no_handler,
+                value_or_address: Value,
                 cycle_increase: 4,
                 cycle_increases_on_page_cross: false
             }),
@@ -360,6 +406,7 @@ impl CPU{
                 address_mode: AddressingMode::ZeroPage,
                 operation: CPU::op_cpx,
                 result_handler: CPU::no_handler,
+                value_or_address: Value,
                 cycle_increase: 3,
                 cycle_increases_on_page_cross: false
             }),
@@ -369,6 +416,7 @@ impl CPU{
                 address_mode: AddressingMode::Immediate,
                 operation: CPU::op_cpy,
                 result_handler: CPU::no_handler,
+                value_or_address: Value,
                 cycle_increase: 2,
                 cycle_increases_on_page_cross: false
             }),
@@ -376,6 +424,7 @@ impl CPU{
                 address_mode: AddressingMode::Absolute,
                 operation: CPU::op_cpy,
                 result_handler: CPU::no_handler,
+                value_or_address: Value,
                 cycle_increase: 4,
                 cycle_increases_on_page_cross: false
             }),
@@ -383,6 +432,7 @@ impl CPU{
                 address_mode: AddressingMode::ZeroPage,
                 operation: CPU::op_cpy,
                 result_handler: CPU::no_handler,
+                value_or_address: Value,
                 cycle_increase: 3,
                 cycle_increases_on_page_cross: false
             }),
@@ -392,6 +442,7 @@ impl CPU{
                 address_mode: AddressingMode::Absolute,
                 operation: CPU::op_dec,
                 result_handler: CPU::result_into_memory,
+                value_or_address: Value,
                 cycle_increase: 6,
                 cycle_increases_on_page_cross: false
             }),
@@ -399,6 +450,7 @@ impl CPU{
                 address_mode: AddressingMode::XIndexedAbsolute,
                 operation: CPU::op_dec,
                 result_handler: CPU::result_into_memory,
+                value_or_address: Value,
                 cycle_increase: 7,
                 cycle_increases_on_page_cross: false
             }),
@@ -406,6 +458,7 @@ impl CPU{
                 address_mode: AddressingMode::ZeroPage,
                 operation: CPU::op_dec,
                 result_handler: CPU::result_into_memory,
+                value_or_address: Value,
                 cycle_increase: 5,
                 cycle_increases_on_page_cross: false
             }),
@@ -413,6 +466,7 @@ impl CPU{
                 address_mode: AddressingMode::XIndexedZeroPage,
                 operation: CPU::op_dec,
                 result_handler: CPU::result_into_memory,
+                value_or_address: Value,
                 cycle_increase: 6,
                 cycle_increases_on_page_cross: false
             }),
@@ -422,6 +476,7 @@ impl CPU{
                 address_mode: AddressingMode::Implied,
                 operation: CPU::op_dex,
                 result_handler: CPU::no_handler,
+                value_or_address: Value,
                 cycle_increase: 2,
                 cycle_increases_on_page_cross: false
             }),
@@ -431,6 +486,7 @@ impl CPU{
                 address_mode: AddressingMode::Implied,
                 operation: CPU::op_dey,
                 result_handler: CPU::no_handler,
+                value_or_address: Value,
                 cycle_increase: 2,
                 cycle_increases_on_page_cross: false
             }),
@@ -440,6 +496,7 @@ impl CPU{
                 address_mode: AddressingMode::Immediate,
                 operation: CPU::op_eor,
                 result_handler: CPU::result_into_acc,
+                value_or_address: Value,
                 cycle_increase: 2,
                 cycle_increases_on_page_cross: false
             }),
@@ -447,6 +504,7 @@ impl CPU{
                 address_mode: AddressingMode::Absolute,
                 operation: CPU::op_eor,
                 result_handler: CPU::result_into_acc,
+                value_or_address: Value,
                 cycle_increase: 4,
                 cycle_increases_on_page_cross: false
             }),
@@ -454,6 +512,7 @@ impl CPU{
                 address_mode: AddressingMode::XIndexedAbsolute,
                 operation: CPU::op_eor,
                 result_handler: CPU::result_into_acc,
+                value_or_address: Value,
                 cycle_increase: 4,
                 cycle_increases_on_page_cross: true
             }),
@@ -461,6 +520,7 @@ impl CPU{
                 address_mode: AddressingMode::YIndexedAbsolute,
                 operation: CPU::op_eor,
                 result_handler: CPU::result_into_acc,
+                value_or_address: Value,
                 cycle_increase: 4,
                 cycle_increases_on_page_cross: true
             }),
@@ -468,6 +528,7 @@ impl CPU{
                 address_mode: AddressingMode::ZeroPage,
                 operation: CPU::op_eor,
                 result_handler: CPU::result_into_acc,
+                value_or_address: Value,
                 cycle_increase: 3,
                 cycle_increases_on_page_cross: false
             }),
@@ -475,6 +536,7 @@ impl CPU{
                 address_mode: AddressingMode::XIndexedZeroPage,
                 operation: CPU::op_eor,
                 result_handler: CPU::result_into_acc,
+                value_or_address: Value,
                 cycle_increase: 4,
                 cycle_increases_on_page_cross: false
             }),
@@ -482,6 +544,7 @@ impl CPU{
                 address_mode: AddressingMode::XIndexedZeroPageIndirect,
                 operation: CPU::op_eor,
                 result_handler: CPU::result_into_acc,
+                value_or_address: Value,
                 cycle_increase: 6,
                 cycle_increases_on_page_cross: false
             }),
@@ -489,6 +552,7 @@ impl CPU{
                 address_mode: AddressingMode::ZeroPageIndirectYIndexed,
                 operation: CPU::op_eor,
                 result_handler: CPU::result_into_acc,
+                value_or_address: Value,
                 cycle_increase: 5,
                 cycle_increases_on_page_cross: true
             }),
@@ -498,6 +562,7 @@ impl CPU{
                 address_mode: AddressingMode::Absolute,
                 operation: CPU::op_inc,
                 result_handler: CPU::result_into_memory,
+                value_or_address: Value,
                 cycle_increase: 6,
                 cycle_increases_on_page_cross: false
             }),
@@ -505,6 +570,7 @@ impl CPU{
                 address_mode: AddressingMode::XIndexedAbsolute,
                 operation: CPU::op_inc,
                 result_handler: CPU::result_into_memory,
+                value_or_address: Value,
                 cycle_increase: 7,
                 cycle_increases_on_page_cross: false
             }),
@@ -512,6 +578,7 @@ impl CPU{
                 address_mode: AddressingMode::ZeroPage,
                 operation: CPU::op_inc,
                 result_handler: CPU::result_into_memory,
+                value_or_address: Value,
                 cycle_increase: 5,
                 cycle_increases_on_page_cross: false
             }),
@@ -519,6 +586,7 @@ impl CPU{
                 address_mode: AddressingMode::XIndexedZeroPage,
                 operation: CPU::op_inc,
                 result_handler: CPU::result_into_memory,
+                value_or_address: Value,
                 cycle_increase: 6,
                 cycle_increases_on_page_cross: false
             }),
@@ -528,6 +596,7 @@ impl CPU{
                 address_mode: AddressingMode::Implied,
                 operation: CPU::op_inx,
                 result_handler: CPU::no_handler,
+                value_or_address: Value,
                 cycle_increase: 2,
                 cycle_increases_on_page_cross: false
             }),
@@ -537,6 +606,7 @@ impl CPU{
                 address_mode: AddressingMode::Implied,
                 operation: CPU::op_iny,
                 result_handler: CPU::no_handler,
+                value_or_address: Value,
                 cycle_increase: 2,
                 cycle_increases_on_page_cross: false
             }),
@@ -546,6 +616,7 @@ impl CPU{
                 address_mode: AddressingMode::Absolute,
                 operation: CPU::op_jmp,
                 result_handler: CPU::no_handler,
+                value_or_address: Address,
                 cycle_increase: 3,
                 cycle_increases_on_page_cross: false
             }),
@@ -553,6 +624,7 @@ impl CPU{
                 address_mode: AddressingMode::AbsoluteIndirect,
                 operation: CPU::op_jmp,
                 result_handler: CPU::no_handler,
+                value_or_address: Address,
                 cycle_increase: 5,
                 cycle_increases_on_page_cross: false
             }),
@@ -562,6 +634,7 @@ impl CPU{
                 address_mode: AddressingMode::Immediate,
                 operation: CPU::op_lda,
                 result_handler: CPU::no_handler,
+                value_or_address: Value,
                 cycle_increase: 2,
                 cycle_increases_on_page_cross: false
             }),
@@ -569,6 +642,7 @@ impl CPU{
                 address_mode: AddressingMode::Absolute,
                 operation: CPU::op_lda,
                 result_handler: CPU::no_handler,
+                value_or_address: Value,
                 cycle_increase: 4,
                 cycle_increases_on_page_cross: false
             }),
@@ -576,6 +650,7 @@ impl CPU{
                 address_mode: AddressingMode::XIndexedAbsolute,
                 operation: CPU::op_lda,
                 result_handler: CPU::no_handler,
+                value_or_address: Value,
                 cycle_increase: 4,
                 cycle_increases_on_page_cross: true
             }),
@@ -583,6 +658,7 @@ impl CPU{
                 address_mode: AddressingMode::YIndexedAbsolute,
                 operation: CPU::op_lda,
                 result_handler: CPU::no_handler,
+                value_or_address: Value,
                 cycle_increase: 4,
                 cycle_increases_on_page_cross: true
             }),
@@ -590,6 +666,7 @@ impl CPU{
                 address_mode: AddressingMode::ZeroPage,
                 operation: CPU::op_lda,
                 result_handler: CPU::no_handler,
+                value_or_address: Value,
                 cycle_increase: 3,
                 cycle_increases_on_page_cross: false
             }),
@@ -597,6 +674,7 @@ impl CPU{
                 address_mode: AddressingMode::XIndexedZeroPage,
                 operation: CPU::op_lda,
                 result_handler: CPU::no_handler,
+                value_or_address: Value,
                 cycle_increase: 4,
                 cycle_increases_on_page_cross: false
             }),
@@ -604,6 +682,7 @@ impl CPU{
                 address_mode: AddressingMode::XIndexedZeroPageIndirect,
                 operation: CPU::op_lda,
                 result_handler: CPU::no_handler,
+                value_or_address: Value,
                 cycle_increase: 6,
                 cycle_increases_on_page_cross: false
             }),
@@ -611,6 +690,7 @@ impl CPU{
                 address_mode: AddressingMode::ZeroPageIndirectYIndexed,
                 operation: CPU::op_lda,
                 result_handler: CPU::no_handler,
+                value_or_address: Value,
                 cycle_increase: 5,
                 cycle_increases_on_page_cross: true
             }),
@@ -620,6 +700,7 @@ impl CPU{
                 address_mode: AddressingMode::Immediate,
                 operation: CPU::op_ldx,
                 result_handler: CPU::no_handler,
+                value_or_address: Value,
                 cycle_increase: 2,
                 cycle_increases_on_page_cross: false
             }),
@@ -627,6 +708,7 @@ impl CPU{
                 address_mode: AddressingMode::Absolute,
                 operation: CPU::op_ldx,
                 result_handler: CPU::no_handler,
+                value_or_address: Value,
                 cycle_increase: 4,
                 cycle_increases_on_page_cross: false
             }),
@@ -634,6 +716,7 @@ impl CPU{
                 address_mode: AddressingMode::YIndexedAbsolute,
                 operation: CPU::op_ldx,
                 result_handler: CPU::no_handler,
+                value_or_address: Value,
                 cycle_increase: 4,
                 cycle_increases_on_page_cross: true
             }),
@@ -641,6 +724,7 @@ impl CPU{
                 address_mode: AddressingMode::ZeroPage,
                 operation: CPU::op_ldx,
                 result_handler: CPU::no_handler,
+                value_or_address: Value,
                 cycle_increase: 3,
                 cycle_increases_on_page_cross: false
             }),
@@ -648,6 +732,7 @@ impl CPU{
                 address_mode: AddressingMode::YIndexedZeroPage,
                 operation: CPU::op_ldx,
                 result_handler: CPU::no_handler,
+                value_or_address: Value,
                 cycle_increase: 3,
                 cycle_increases_on_page_cross: false
             }),
@@ -657,6 +742,7 @@ impl CPU{
                 address_mode: AddressingMode::Immediate,
                 operation: CPU::op_ldy,
                 result_handler: CPU::no_handler,
+                value_or_address: Value,
                 cycle_increase: 2,
                 cycle_increases_on_page_cross: false
             }),
@@ -664,6 +750,7 @@ impl CPU{
                 address_mode: AddressingMode::Absolute,
                 operation: CPU::op_ldy,
                 result_handler: CPU::no_handler,
+                value_or_address: Value,
                 cycle_increase: 4,
                 cycle_increases_on_page_cross: false
             }),
@@ -671,6 +758,7 @@ impl CPU{
                 address_mode: AddressingMode::XIndexedAbsolute,
                 operation: CPU::op_ldy,
                 result_handler: CPU::no_handler,
+                value_or_address: Value,
                 cycle_increase: 4,
                 cycle_increases_on_page_cross: true
             }),
@@ -678,6 +766,7 @@ impl CPU{
                 address_mode: AddressingMode::ZeroPage,
                 operation: CPU::op_ldy,
                 result_handler: CPU::no_handler,
+                value_or_address: Value,
                 cycle_increase: 3,
                 cycle_increases_on_page_cross: false
             }),
@@ -685,6 +774,7 @@ impl CPU{
                 address_mode: AddressingMode::XIndexedZeroPage,
                 operation: CPU::op_ldy,
                 result_handler: CPU::no_handler,
+                value_or_address: Value,
                 cycle_increase: 3,
                 cycle_increases_on_page_cross: false
             }),
@@ -694,6 +784,7 @@ impl CPU{
                 address_mode: AddressingMode::Absolute,
                 operation: CPU::op_sta,
                 result_handler: CPU::no_handler,
+                value_or_address: Address,
                 cycle_increase: 4,
                 cycle_increases_on_page_cross: false
             }),
@@ -701,6 +792,7 @@ impl CPU{
                 address_mode: AddressingMode::XIndexedAbsolute,
                 operation: CPU::op_sta,
                 result_handler: CPU::no_handler,
+                value_or_address: Address,
                 cycle_increase: 5,
                 cycle_increases_on_page_cross: false
             }),
@@ -708,6 +800,7 @@ impl CPU{
                 address_mode: AddressingMode::YIndexedAbsolute,
                 operation: CPU::op_sta,
                 result_handler: CPU::no_handler,
+                value_or_address: Address,
                 cycle_increase: 5,
                 cycle_increases_on_page_cross: false
             }),
@@ -715,6 +808,7 @@ impl CPU{
                 address_mode: AddressingMode::ZeroPage,
                 operation: CPU::op_sta,
                 result_handler: CPU::no_handler,
+                value_or_address: Address,
                 cycle_increase: 3,
                 cycle_increases_on_page_cross: false
             }),
@@ -722,6 +816,7 @@ impl CPU{
                 address_mode: AddressingMode::XIndexedZeroPage,
                 operation: CPU::op_sta,
                 result_handler: CPU::no_handler,
+                value_or_address: Address,
                 cycle_increase: 4,
                 cycle_increases_on_page_cross: false
             }),
@@ -729,6 +824,7 @@ impl CPU{
                 address_mode: AddressingMode::XIndexedZeroPageIndirect,
                 operation: CPU::op_sta,
                 result_handler: CPU::no_handler,
+                value_or_address: Address,
                 cycle_increase: 6,
                 cycle_increases_on_page_cross: false
             }),
@@ -736,7 +832,60 @@ impl CPU{
                 address_mode: AddressingMode::ZeroPageIndirectYIndexed,
                 operation: CPU::op_sta,
                 result_handler: CPU::no_handler,
+                value_or_address: Address,
                 cycle_increase: 6,
+                cycle_increases_on_page_cross: false
+            }),
+
+            //STX
+            (0x8E, Instruction{
+                address_mode: AddressingMode::Absolute,
+                operation: CPU::op_stx,
+                result_handler: CPU::no_handler,
+                value_or_address: Address,
+                cycle_increase: 4,
+                cycle_increases_on_page_cross: false
+            }),
+            (0x86, Instruction{
+                address_mode: AddressingMode::ZeroPage,
+                operation: CPU::op_stx,
+                result_handler: CPU::no_handler,
+                value_or_address: Address,
+                cycle_increase: 3,
+                cycle_increases_on_page_cross: false
+            }),
+            (0x96, Instruction{
+                address_mode: AddressingMode::YIndexedZeroPage,
+                operation: CPU::op_stx,
+                result_handler: CPU::no_handler,
+                value_or_address: Address,
+                cycle_increase: 4,
+                cycle_increases_on_page_cross: false
+            }),
+
+            //STY
+            (0x8C, Instruction{
+                address_mode: AddressingMode::Absolute,
+                operation: CPU::op_sty,
+                result_handler: CPU::no_handler,
+                value_or_address: Address,
+                cycle_increase: 4,
+                cycle_increases_on_page_cross: false
+            }),
+            (0x84, Instruction{
+                address_mode: AddressingMode::ZeroPage,
+                operation: CPU::op_sty,
+                result_handler: CPU::no_handler,
+                value_or_address: Address,
+                cycle_increase: 3,
+                cycle_increases_on_page_cross: false
+            }),
+            (0x94, Instruction{
+                address_mode: AddressingMode::XIndexedZeroPage,
+                operation: CPU::op_sty,
+                result_handler: CPU::no_handler,
+                value_or_address: Address,
+                cycle_increase: 4,
                 cycle_increases_on_page_cross: false
             }),
         ])
