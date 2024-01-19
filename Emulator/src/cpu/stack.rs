@@ -7,7 +7,8 @@ impl CPU{
     }
 
     pub fn push_byte_to_stack(&mut self, value: u8){
-        self.memory[CPU::convert_address_to_stack(self.registers.sp)] = value;
+        let address = CPU::convert_address_to_stack(self.registers.sp);
+        self.memory[address] = value;
         self.registers.sp = self.registers.sp.wrapping_sub(1);
     }
 

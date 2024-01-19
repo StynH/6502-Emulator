@@ -48,12 +48,4 @@ impl CPU {
 
         (self.memory[final_address as usize], page_crossed(effective_address, final_address), final_address)
     }
-
-    pub fn index_relative(&mut self, offset: i8) -> bool {
-        let new_pc = self.registers.pc.wrapping_add(offset as i16 as u16);
-        let page_crossed = page_crossed(self.registers.pc, new_pc);
-        self.registers.pc = new_pc;
-
-        page_crossed
-    }
 }

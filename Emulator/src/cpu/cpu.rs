@@ -1,4 +1,5 @@
 use crate::cpu::instructions::InstructionParameter;
+use crate::helpers::addressing::page_crossed;
 use crate::helpers::bitwise::{get_bit_at_position, get_msb, is_highest_bit_set, merge_bytes_into_word, split_word_into_bytes};
 
 pub struct CPU{
@@ -73,7 +74,7 @@ impl CPU{
                 decimal: false,
                 interrupt: false,
                 zero: false,
-                carry: true,
+                carry: false,
             },
             memory: vec![0;32 * 32 * 32 * 2],
             cycles: 0
@@ -199,11 +200,11 @@ impl CPU{
 
     pub fn op_bne(&mut self, parameter: InstructionParameter) -> Option<u8> {
         match parameter {
-            InstructionParameter::Byte(offset) => {
+            InstructionParameter::Word(offset) => {
                 if !self.flags.zero {
-                    let new_pc = self.registers.pc.wrapping_add(offset as u16);
+                    let new_pc = self.registers.pc.wrapping_add(offset as i16 as u16);
                     self.registers.pc = new_pc;
-                    self.cycles += 1;
+                    self.cycles += 1 + (page_crossed as u32);
                 }
 
                 None
@@ -706,8 +707,16 @@ impl CPU{
 
     pub fn op_sta(&mut self, parameter: InstructionParameter) -> Option<u8> {
         match parameter {
+            InstructionParameter::Byte(address) => {
+                if (address as usize) >= self.memory.len() {
+                    panic!("Memory access out of bounds");
+                }
+                self.memory[address as usize] = self.registers.acc;
+
+                None
+            }
             InstructionParameter::Word(address) => {
-                if address >= self.memory.len() as u16 {
+                if (address as usize) >= self.memory.len() {
                     panic!("Memory access out of bounds");
                 }
                 self.memory[address as usize] = self.registers.acc;
@@ -720,8 +729,16 @@ impl CPU{
 
     pub fn op_stx(&mut self, parameter: InstructionParameter) -> Option<u8> {
         match parameter {
+            InstructionParameter::Byte(address) => {
+                if (address as usize) >= self.memory.len() {
+                    panic!("Memory access out of bounds");
+                }
+                self.memory[address as usize] = self.registers.xr;
+
+                None
+            }
             InstructionParameter::Word(address) => {
-                if address >= self.memory.len() as u16 {
+                if (address as usize) >= self.memory.len() {
                     panic!("Memory access out of bounds");
                 }
                 self.memory[address as usize] = self.registers.xr;
@@ -734,8 +751,16 @@ impl CPU{
 
     pub fn op_sty(&mut self, parameter: InstructionParameter) -> Option<u8> {
         match parameter {
+            InstructionParameter::Byte(address) => {
+                if (address as usize) >= self.memory.len() {
+                    panic!("Memory access out of bounds");
+                }
+                self.memory[address as usize] = self.registers.yr;
+
+                None
+            }
             InstructionParameter::Word(address) => {
-                if address >= self.memory.len() as u16 {
+                if (address as usize) >= self.memory.len() {
                     panic!("Memory access out of bounds");
                 }
                 self.memory[address as usize] = self.registers.yr;

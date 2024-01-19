@@ -232,7 +232,7 @@ impl CPU{
             //BRK
             (0x00, Instruction{
                 address_mode: AddressingMode::Implied,
-                operation: CPU::op_bpl,
+                operation: CPU::op_brk,
                 result_handler: CPU::no_handler,
                 cycle_increase: 7,
                 cycle_increases_on_page_cross: false
@@ -614,6 +614,131 @@ impl CPU{
                 cycle_increase: 5,
                 cycle_increases_on_page_cross: true
             }),
+
+            //LDX
+            (0xA2, Instruction{
+                address_mode: AddressingMode::Immediate,
+                operation: CPU::op_ldx,
+                result_handler: CPU::no_handler,
+                cycle_increase: 2,
+                cycle_increases_on_page_cross: false
+            }),
+            (0xAE, Instruction{
+                address_mode: AddressingMode::Absolute,
+                operation: CPU::op_ldx,
+                result_handler: CPU::no_handler,
+                cycle_increase: 4,
+                cycle_increases_on_page_cross: false
+            }),
+            (0xBE, Instruction{
+                address_mode: AddressingMode::YIndexedAbsolute,
+                operation: CPU::op_ldx,
+                result_handler: CPU::no_handler,
+                cycle_increase: 4,
+                cycle_increases_on_page_cross: true
+            }),
+            (0xA6, Instruction{
+                address_mode: AddressingMode::ZeroPage,
+                operation: CPU::op_ldx,
+                result_handler: CPU::no_handler,
+                cycle_increase: 3,
+                cycle_increases_on_page_cross: false
+            }),
+            (0xB6, Instruction{
+                address_mode: AddressingMode::YIndexedZeroPage,
+                operation: CPU::op_ldx,
+                result_handler: CPU::no_handler,
+                cycle_increase: 3,
+                cycle_increases_on_page_cross: false
+            }),
+
+            //LDY
+            (0xA0, Instruction{
+                address_mode: AddressingMode::Immediate,
+                operation: CPU::op_ldy,
+                result_handler: CPU::no_handler,
+                cycle_increase: 2,
+                cycle_increases_on_page_cross: false
+            }),
+            (0xAC, Instruction{
+                address_mode: AddressingMode::Absolute,
+                operation: CPU::op_ldy,
+                result_handler: CPU::no_handler,
+                cycle_increase: 4,
+                cycle_increases_on_page_cross: false
+            }),
+            (0xBC, Instruction{
+                address_mode: AddressingMode::XIndexedAbsolute,
+                operation: CPU::op_ldy,
+                result_handler: CPU::no_handler,
+                cycle_increase: 4,
+                cycle_increases_on_page_cross: true
+            }),
+            (0xA4, Instruction{
+                address_mode: AddressingMode::ZeroPage,
+                operation: CPU::op_ldy,
+                result_handler: CPU::no_handler,
+                cycle_increase: 3,
+                cycle_increases_on_page_cross: false
+            }),
+            (0xB4, Instruction{
+                address_mode: AddressingMode::XIndexedZeroPage,
+                operation: CPU::op_ldy,
+                result_handler: CPU::no_handler,
+                cycle_increase: 3,
+                cycle_increases_on_page_cross: false
+            }),
+
+            //STA
+            (0x8D, Instruction{
+                address_mode: AddressingMode::Absolute,
+                operation: CPU::op_sta,
+                result_handler: CPU::no_handler,
+                cycle_increase: 4,
+                cycle_increases_on_page_cross: false
+            }),
+            (0x9D, Instruction{
+                address_mode: AddressingMode::XIndexedAbsolute,
+                operation: CPU::op_sta,
+                result_handler: CPU::no_handler,
+                cycle_increase: 5,
+                cycle_increases_on_page_cross: false
+            }),
+            (0x99, Instruction{
+                address_mode: AddressingMode::YIndexedAbsolute,
+                operation: CPU::op_sta,
+                result_handler: CPU::no_handler,
+                cycle_increase: 5,
+                cycle_increases_on_page_cross: false
+            }),
+            (0x85, Instruction{
+                address_mode: AddressingMode::ZeroPage,
+                operation: CPU::op_sta,
+                result_handler: CPU::no_handler,
+                cycle_increase: 3,
+                cycle_increases_on_page_cross: false
+            }),
+            (0x95, Instruction{
+                address_mode: AddressingMode::XIndexedZeroPage,
+                operation: CPU::op_sta,
+                result_handler: CPU::no_handler,
+                cycle_increase: 4,
+                cycle_increases_on_page_cross: false
+            }),
+            (0x81, Instruction{
+                address_mode: AddressingMode::XIndexedZeroPageIndirect,
+                operation: CPU::op_sta,
+                result_handler: CPU::no_handler,
+                cycle_increase: 6,
+                cycle_increases_on_page_cross: false
+            }),
+            (0x91, Instruction{
+                address_mode: AddressingMode::ZeroPageIndirectYIndexed,
+                operation: CPU::op_sta,
+                result_handler: CPU::no_handler,
+                cycle_increase: 6,
+                cycle_increases_on_page_cross: false
+            }),
         ])
     }
 
@@ -626,7 +751,7 @@ impl CPU{
     fn result_into_memory(&mut self, value: Option<u8>, address: Option<u16>){
         match address {
             Some(result_address) => {
-                if result_address >= self.memory.len() as u16 {
+                if (result_address as usize) >= self.memory.len() {
                     panic!("Memory out of bounds when writing result to memory.")
                 }
                 self.memory[result_address as usize] = value.unwrap_or_else(|| {

@@ -21,6 +21,7 @@ pub enum AddressingMode {
     YIndexedAbsolute,
     ZeroPage,
     XIndexedZeroPage,
+    YIndexedZeroPage,
     XIndexedZeroPageIndirect,
     ZeroPageIndirectYIndexed,
     Relative,
@@ -124,6 +125,12 @@ impl CPU {
                 let result = (instruction.operation)(self, InstructionParameter::Byte(stored));
                 (instruction.result_handler)(self, result, Some(final_address));
             }
+            AddressingMode::YIndexedZeroPage => {
+                let value = self.get_next_byte(&mut bytes);
+                let (stored, final_address) = self.handle_y_indexed_zero_paged(value, instruction.cycle_increase);
+                let result = (instruction.operation)(self, InstructionParameter::Byte(stored));
+                (instruction.result_handler)(self, result, Some(final_address));
+            }
             AddressingMode::XIndexedZeroPageIndirect => {
                 let value = self.get_next_byte(&mut bytes);
                 let (stored, final_address) = self.handle_x_indexed_zero_paged_indirect(value, instruction.cycle_increase);
@@ -138,8 +145,7 @@ impl CPU {
             }
             AddressingMode::Relative => {
                 let value = self.get_next_byte(&mut bytes);
-                self.handle_index_relative(value as i8, instruction.cycle_increase, instruction.cycle_increases_on_page_cross);
-                (instruction.operation)(self, InstructionParameter::None);
+                (instruction.operation)(self, InstructionParameter::Word(value as u16));
                 (instruction.result_handler)(self, None, None);
             }
         }
@@ -173,6 +179,13 @@ impl CPU {
         (value, final_address)
     }
 
+    pub fn handle_y_indexed_zero_paged(&mut self, address: u8, cycle_increase: u32) -> (u8, u16) {
+        let (value, final_address) = self.index_zero_page_indexed(address, self.registers.yr);
+        self.cycles += cycle_increase;
+
+        (value, final_address)
+    }
+
     pub fn handle_x_indexed_zero_paged_indirect(&mut self, address: u8, cycle_increase: u32) -> (u8, u16) {
         let (value, final_address) = self.index_zero_paged_indexed_indirect(address, self.registers.xr);
         self.cycles += cycle_increase;
@@ -185,10 +198,5 @@ impl CPU {
         self.cycles += cycle_increase + ((cycle_increase_on_page_cross && page_crossed) as u32);
 
         (value, final_address)
-    }
-
-    pub fn handle_index_relative(&mut self, offset: i8, cycle_increase: u32, cycle_increase_on_page_cross: bool){
-        let page_crossed = self.index_relative(offset);
-        self.cycles += cycle_increase + ((cycle_increase_on_page_cross && page_crossed) as u32);
     }
 }
