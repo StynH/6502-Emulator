@@ -526,6 +526,10 @@ impl CPU{
         }
     }
 
+    pub fn op_nop(&mut self, parameter: InstructionParameter) -> Option<u8>{
+        None
+    }
+
     pub fn op_ora(&mut self, parameter: InstructionParameter) -> Option<u8> {
         match parameter {
             InstructionParameter::Byte(value) => {
