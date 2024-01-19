@@ -1,6 +1,5 @@
 use crate::cpu::instructions::InstructionParameter;
-use crate::helpers::addressing::page_crossed;
-use crate::helpers::bitwise::{get_bit_at_position, get_msb, is_highest_bit_set, merge_bytes_into_word, split_word_into_bytes};
+use crate::helpers::bitwise::{get_bit_at_position, get_msb, is_highest_bit_set};
 
 pub struct CPU{
     pub registers: Registers,
@@ -202,7 +201,8 @@ impl CPU{
         match parameter {
             InstructionParameter::Word(offset) => {
                 if !self.flags.zero {
-                    let new_pc = self.registers.pc.wrapping_add(offset as i16 as u16);
+                    let calculated_offset = (offset as i8) as i16 as u16; //Truncate to an i8 to correctly get negative numbers.
+                    let new_pc = self.registers.pc.wrapping_add(calculated_offset);
                     self.registers.pc = new_pc;
                     self.cycles += 1;
                 }
@@ -412,7 +412,7 @@ impl CPU{
     pub fn op_inc(&mut self, parameter: InstructionParameter) -> Option<u8>{
         match parameter {
             InstructionParameter::Byte(value) => {
-                let mut result = value.wrapping_add(1);
+                let result = value.wrapping_add(1);
                 self.flags.zero = result == 0;
                 self.flags.negative = get_msb(value) != 0;
 
@@ -516,7 +516,7 @@ impl CPU{
             InstructionParameter::Byte(value) => {
                 self.flags.carry = value & 1 != 0;
 
-                let mut result = value.wrapping_shr(1);
+                let result = value.wrapping_shr(1);
                 self.flags.negative = false;
                 self.flags.zero = result == 0;
 
@@ -526,7 +526,7 @@ impl CPU{
         }
     }
 
-    pub fn op_nop(&mut self, parameter: InstructionParameter) -> Option<u8>{
+    pub fn op_nop(&mut self, _: InstructionParameter) -> Option<u8>{
         None
     }
 

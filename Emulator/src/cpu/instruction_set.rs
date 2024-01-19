@@ -309,6 +309,16 @@ impl CPU{
                 cycle_increases_on_page_cross: false
             }),
 
+            //CLI,
+            (0x58, Instruction{
+                address_mode: AddressingMode::Implied,
+                operation: CPU::op_cli,
+                result_handler: CPU::no_handler,
+                value_or_address: Value,
+                cycle_increase: 2,
+                cycle_increases_on_page_cross: false
+            }),
+
             //CLV
             (0xB8, Instruction{
                 address_mode: AddressingMode::Implied,
@@ -626,6 +636,16 @@ impl CPU{
                 result_handler: CPU::no_handler,
                 value_or_address: Address,
                 cycle_increase: 5,
+                cycle_increases_on_page_cross: false
+            }),
+
+            //JSR
+            (0x20, Instruction{
+                address_mode: AddressingMode::Absolute,
+                operation: CPU::op_jsr,
+                result_handler: CPU::no_handler,
+                value_or_address: Address,
+                cycle_increase: 6,
                 cycle_increases_on_page_cross: false
             }),
 

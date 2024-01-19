@@ -88,9 +88,7 @@ impl CPU {
                 let address = self.get_next_word(&mut bytes);
                 match instruction.value_or_address {
                     ValueOrAddress::Value => {
-                        let stored = *self.memory.get(address as usize).unwrap_or_else(|| {
-                            panic!("Memory out of bounds")
-                        }) as u16;
+                        let stored = self.index_absolute(address) as u16;
                         let result = (instruction.operation)(self, InstructionParameter::Word(stored));
                         (instruction.result_handler)(self, result, None);
                     }
