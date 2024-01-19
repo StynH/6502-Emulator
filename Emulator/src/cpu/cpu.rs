@@ -1,11 +1,11 @@
 use crate::cpu::instructions::InstructionParameter;
-use crate::helpers::bitwise::{is_highest_bit_set, merge_bytes_into_word, split_word_into_bytes};
+use crate::helpers::bitwise::{get_bit_at_position, get_msb, is_highest_bit_set, merge_bytes_into_word, split_word_into_bytes};
 
 pub struct CPU{
     pub registers: Registers,
     pub flags: Flags,
     pub memory: Vec<u8>,
-    pub cycles: u16
+    pub cycles: u32
 }
 
 pub struct Registers{
@@ -166,6 +166,20 @@ impl CPU{
         }
     }
 
+    pub fn op_bit(&mut self, parameter: InstructionParameter) -> Option<u8> {
+        match parameter {
+            InstructionParameter::Byte(value) => {
+                let result = self.registers.acc & value;
+
+                self.flags.negative = get_msb(value) != 0;
+                self.flags.overflow = get_bit_at_position(value, 6) != 0;
+                self.flags.zero = result == 0;
+
+                None
+            }
+            _ => { None }
+        }
+    }
 
     pub fn op_bmi(&mut self, parameter: InstructionParameter) -> Option<u8> {
         match parameter {
@@ -303,7 +317,7 @@ impl CPU{
             InstructionParameter::Byte(value) => {
                 let result = self.registers.acc.wrapping_sub(value);
                 self.flags.zero = self.registers.acc.eq(&value);
-                self.flags.negative = result & (1 << 7) != 0;
+                self.flags.negative = get_msb(result) != 0;
                 self.flags.carry = self.registers.acc >= value;
 
                 None
@@ -317,7 +331,7 @@ impl CPU{
             InstructionParameter::Byte(value) => {
                 let result = self.registers.xr.wrapping_sub(value);
                 self.flags.zero = self.registers.xr.eq(&value);
-                self.flags.negative = result & (1 << 7) != 0;
+                self.flags.negative = get_msb(result) != 0;
                 self.flags.carry = self.registers.xr >= value;
 
                 None
@@ -331,7 +345,7 @@ impl CPU{
             InstructionParameter::Byte(value) => {
                 let result = self.registers.yr.wrapping_sub(value);
                 self.flags.zero = self.registers.yr.eq(&value);
-                self.flags.negative = result & (1 << 7) != 0;
+                self.flags.negative = get_msb(result) != 0;
                 self.flags.carry = self.registers.yr >= value;
 
                 None
@@ -345,7 +359,7 @@ impl CPU{
             InstructionParameter::Byte(value) => {
                 let result = value.wrapping_sub(1);
                 self.flags.zero = result == 0;
-                self.flags.negative = result & (1 << 7) != 0;
+                self.flags.negative = get_msb(value) != 0;
 
                 Some(result)
             }
@@ -358,7 +372,7 @@ impl CPU{
             InstructionParameter::None => {
                 let result = self.registers.xr.wrapping_sub(1);
                 self.flags.zero = result == 0;
-                self.flags.negative = result & (1 << 7) != 0;
+                self.flags.negative = get_msb(result) != 0;
                 self.registers.xr = result;
 
                 None
@@ -372,7 +386,7 @@ impl CPU{
             InstructionParameter::None => {
                 let result = self.registers.yr.wrapping_sub(1);
                 self.flags.zero = result == 0;
-                self.flags.negative = result & (1 << 7) != 0;
+                self.flags.negative = get_msb(result) != 0;
                 self.registers.yr = result;
 
                 None
@@ -386,7 +400,7 @@ impl CPU{
             InstructionParameter::Byte(value) => {
                 self.registers.acc ^= value;
                 self.flags.zero = self.registers.acc == 0;
-                self.flags.negative = self.registers.acc & (1 << 7) != 0;
+                self.flags.negative = get_msb(self.registers.acc) != 0;
 
                 None
             }
@@ -399,7 +413,7 @@ impl CPU{
             InstructionParameter::Byte(value) => {
                 let mut result = value.wrapping_add(1);
                 self.flags.zero = result == 0;
-                self.flags.negative = result & (1 << 7) != 0;
+                self.flags.negative = get_msb(value) != 0;
 
                 Some(result)
             }
@@ -412,7 +426,7 @@ impl CPU{
             InstructionParameter::None => {
                 self.registers.xr = self.registers.xr.wrapping_add(1);
                 self.flags.zero = self.registers.xr == 0;
-                self.flags.negative = self.registers.xr & (1 << 7) != 0;
+                self.flags.negative = get_msb(self.registers.xr) != 0;
 
                 None
             }
@@ -425,7 +439,7 @@ impl CPU{
             InstructionParameter::None => {
                 self.registers.yr = self.registers.yr.wrapping_add(1);
                 self.flags.zero = self.registers.yr == 0;
-                self.flags.negative = self.registers.yr & (1 << 7) != 0;
+                self.flags.negative = get_msb(self.registers.yr) != 0;
 
                 None
             }
@@ -461,7 +475,7 @@ impl CPU{
             InstructionParameter::Byte(value) => {
                 self.registers.acc = value;
                 self.flags.zero = self.registers.acc == 0;
-                self.flags.negative = self.registers.acc & (1 << 7) != 0;
+                self.flags.negative = get_msb(self.registers.acc) != 0;
 
                 None
             }
@@ -474,7 +488,7 @@ impl CPU{
             InstructionParameter::Byte(value) => {
                 self.registers.xr = value;
                 self.flags.zero = self.registers.xr == 0;
-                self.flags.negative = self.registers.xr & (1 << 7) != 0;
+                self.flags.negative = get_msb(self.registers.xr) != 0;
 
                 None
             }
@@ -488,7 +502,7 @@ impl CPU{
             InstructionParameter::Byte(value) => {
                 self.registers.yr = value;
                 self.flags.zero = self.registers.yr == 0;
-                self.flags.negative = self.registers.yr & (1 << 7) != 0;
+                self.flags.negative = get_msb(self.registers.yr) != 0;
 
                 None
             }
@@ -516,7 +530,7 @@ impl CPU{
             InstructionParameter::Byte(value) => {
                 self.registers.acc |= value;
                 self.flags.zero = self.registers.acc == 0;
-                self.flags.negative = self.registers.acc & (1 << 7) != 0;
+                self.flags.negative = get_msb(self.registers.acc) != 0;
 
                 None
             }
@@ -550,9 +564,9 @@ impl CPU{
         match parameter {
             InstructionParameter::None => {
                 if let Some(result) = self.pop_byte_from_stack(){
-                    self.registers.acc = result as u8;
+                    self.registers.acc = result;
                     self.flags.zero = self.registers.acc == 0;
-                    self.flags.negative = self.registers.acc & (1 << 7) != 0;
+                    self.flags.negative = get_msb(self.registers.acc) != 0;
                 }
 
                 None
@@ -577,10 +591,10 @@ impl CPU{
     pub fn op_rol(&mut self, parameter: InstructionParameter) -> Option<u8> {
         match parameter {
             InstructionParameter::Byte(value) => {
-                self.flags.carry = value & (1 << 7) != 0;
+                self.flags.carry = get_msb(value) != 0;
 
                 let result = value.rotate_left(1);
-                self.flags.negative = result & (1 << 7) != 0;
+                self.flags.negative = get_msb(result) != 0;
                 self.flags.zero = result == 0;
 
                 Some(result)
@@ -595,7 +609,7 @@ impl CPU{
                 self.flags.carry = value & 1 != 0;
 
                 let result = value.rotate_right(1);
-                self.flags.negative = result & (1 << 7) != 0;
+                self.flags.negative = get_msb(value) != 0;
                 self.flags.zero = result == 0;
 
                 Some(result)
@@ -608,7 +622,7 @@ impl CPU{
         match parameter {
             InstructionParameter::None => {
                 if let Some(status) = self.pop_byte_from_stack() {
-                    self.flags.load_from_byte(status as u8);
+                    self.flags.load_from_byte(status);
                 }
 
                 if let Some(value) = self.pop_word_from_stack() {
@@ -646,7 +660,7 @@ impl CPU{
 
                 self.flags.carry = acc >= value + (1 - carry);
                 self.flags.zero = (result as u8) == 0;
-                self.flags.negative = (result as u8) & (1 << 7) != 0;
+                self.flags.negative = get_msb(result as u8) != 0;
                 self.flags.overflow = (((acc ^ result) & (value ^ result)) & 0x80) != 0;
 
                 self.registers.acc = result as u8;
@@ -736,7 +750,7 @@ impl CPU{
         match parameter {
             InstructionParameter::None => {
                 self.registers.xr = self.registers.acc;
-                self.flags.negative = self.registers.xr & (1 << 7) != 0;
+                self.flags.negative = get_msb(self.registers.xr) != 0;
                 self.flags.zero = self.registers.xr == 0;
 
                 None
@@ -749,7 +763,7 @@ impl CPU{
         match parameter {
             InstructionParameter::None => {
                 self.registers.yr = self.registers.acc;
-                self.flags.negative = self.registers.yr & (1 << 7) != 0;
+                self.flags.negative = get_msb(self.registers.yr) != 0;
                 self.flags.zero = self.registers.yr == 0;
 
                 None
@@ -762,7 +776,7 @@ impl CPU{
         match parameter {
             InstructionParameter::None => {
                 self.registers.xr = self.registers.sp;
-                self.flags.negative = self.registers.xr & (1 << 7) != 0;
+                self.flags.negative = get_msb(self.registers.xr) != 0;
                 self.flags.zero = self.registers.xr == 0;
 
                 None
@@ -775,7 +789,7 @@ impl CPU{
         match parameter {
             InstructionParameter::None => {
                 self.registers.acc = self.registers.xr;
-                self.flags.negative = self.registers.acc & (1 << 7) != 0;
+                self.flags.negative = get_msb(self.registers.acc) != 0;
                 self.flags.zero = self.registers.acc == 0;
 
                 None
@@ -799,7 +813,7 @@ impl CPU{
         match parameter {
             InstructionParameter::None => {
                 self.registers.acc = self.registers.yr;
-                self.flags.negative = self.registers.acc & (1 << 7) != 0;
+                self.flags.negative = get_msb(self.registers.acc) != 0;
                 self.flags.zero = self.registers.acc == 0;
 
                 None
