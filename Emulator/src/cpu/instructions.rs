@@ -1,6 +1,5 @@
 use crate::cpu::cpu::CPU;
 use crate::helpers::addressing::page_crossed;
-use crate::helpers::bitwise::merge_bytes_into_word;
 
 pub enum InstructionParameter {
     None,
@@ -50,7 +49,7 @@ impl CPU {
         }
 
         let byte = *bytes.get(self.registers.pc as usize).unwrap_or_else(|| {
-            panic!("Memory out of bounds.")
+            panic!("Program end reached!")
         });
         self.registers.pc += 1;
 
@@ -103,16 +102,7 @@ impl CPU {
             }
             AddressingMode::AbsoluteIndirect => {
                 let address = self.get_next_word(&mut bytes);
-                let low_byte = *self.memory.get(address as usize).unwrap_or_else(|| {
-                    panic!("Memory out of bounds")
-                });
-                let high_byte = *self.memory.get(address.wrapping_add(1) as usize).unwrap_or_else(|| {
-                    panic!("Memory out of bounds")
-                });
-                let final_address = merge_bytes_into_word(low_byte, high_byte);
-                let stored = *self.memory.get(final_address as usize).unwrap_or_else(|| {
-                    panic!("Memory out of bounds")
-                });
+                let (stored, final_address) = self.index_absolute_indirect(address);
 
                 self.handle_instruction(instruction, final_address, stored);
                 self.cycles += instruction.cycle_increase

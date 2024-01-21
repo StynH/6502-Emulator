@@ -1,5 +1,6 @@
 use crate::cpu::cpu::CPU;
 use crate::helpers::addressing::page_crossed;
+use crate::helpers::bitwise::merge_bytes_into_word;
 
 impl CPU {
 
@@ -20,6 +21,20 @@ impl CPU {
         *self.memory.get(index as usize).unwrap_or_else(|| {
             panic!("Memory index out of bounds!")
         })
+    }
+
+    pub fn index_absolute_indirect(&self, index: u16) -> (u8, u16){
+        let low_byte = *self.memory.get(index as usize).unwrap_or_else(|| {
+            panic!("Memory out of bounds")
+        });
+        let high_byte = *self.memory.get(index.wrapping_add(1) as usize).unwrap_or_else(|| {
+            panic!("Memory out of bounds")
+        });
+        let final_address = merge_bytes_into_word(low_byte, high_byte);
+
+        (*self.memory.get(final_address as usize).unwrap_or_else(|| {
+            panic!("Memory out of bounds")
+        }), final_address)
     }
 
     pub fn index_absolute_indexed(&self, index: u16, offset: u8) -> (u8, bool, u16){
