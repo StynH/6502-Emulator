@@ -1,5 +1,6 @@
 use crate::cpu::cpu::CPU;
 use crate::helpers::addressing::page_crossed;
+use crate::helpers::bitwise::merge_bytes_into_word;
 
 pub enum InstructionParameter {
     None,
@@ -88,13 +89,13 @@ impl CPU {
                 let address = self.get_next_word(&mut bytes);
                 match instruction.value_or_address {
                     ValueOrAddress::Value => {
-                        let stored = self.index_absolute(address) as u16;
-                        let result = (instruction.operation)(self, InstructionParameter::Word(stored));
-                        (instruction.result_handler)(self, result, None);
+                        let stored = self.index_absolute(address);
+                        let result = (instruction.operation)(self, InstructionParameter::Byte(stored));
+                        (instruction.result_handler)(self, result, Some(address));
                     }
                     ValueOrAddress::Address => {
                         let result = (instruction.operation)(self, InstructionParameter::Word(address));
-                        (instruction.result_handler)(self, result, None);
+                        (instruction.result_handler)(self, result, Some(address));
                     }
                 }
 
@@ -102,9 +103,13 @@ impl CPU {
             }
             AddressingMode::AbsoluteIndirect => {
                 let address = self.get_next_word(&mut bytes);
-                let final_address = *self.memory.get(address as usize).unwrap_or_else(|| {
+                let low_byte = *self.memory.get(address as usize).unwrap_or_else(|| {
                     panic!("Memory out of bounds")
-                }) as u16;
+                });
+                let high_byte = *self.memory.get(address.wrapping_add(1) as usize).unwrap_or_else(|| {
+                    panic!("Memory out of bounds")
+                });
+                let final_address = merge_bytes_into_word(low_byte, high_byte);
                 let stored = *self.memory.get(final_address as usize).unwrap_or_else(|| {
                     panic!("Memory out of bounds")
                 });

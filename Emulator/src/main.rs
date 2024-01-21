@@ -8,13 +8,7 @@ fn main() {
     let instruction_set = cpu.get_instruction_set();
 
     let bytes = [
-        0xA9, 0x00, // LDA #00
-        0x85, 0x00, // STA 0200
-        0xE6, 0x00, // INC 0200
-        0xA5, 0x00, // LDA 0200
-        0xC9, 0x20, // CMP #10
-        0xD0, 0xF8, // BNE -8 (to the INC instruction)
-        0x00        // BRK
+        0xa9, 0x01, 0x85, 0xf0, 0xa9, 0xcc, 0x85, 0xf1, 0x6c, 0xf0, 0x00
     ];
 
     while (cpu.registers.pc as usize) < bytes.len() {
@@ -23,12 +17,10 @@ fn main() {
             panic!("Instruction {:#04X?} not found.", opcode)
         });
         cpu.execute_instruction(instruction, bytes.as_slice());
-
-        //println!("Instruction {:#04X?}.", opcode)
     }
 
-    println!("PC {}, SP: {}", cpu.registers.pc, cpu.registers.sp);
-    println!("ACC: {}, XR: {}, YR: {}", cpu.registers.acc, cpu.registers.xr, cpu.registers.yr);
+    println!("PC {:#04X?}, SP: {:#04X?}", cpu.registers.pc, cpu.registers.sp);
+    println!("ACC: {:#04X?}, XR: {:#04X?}, YR: {:#04X?}", cpu.registers.acc, cpu.registers.xr, cpu.registers.yr);
     println!("Carry: {}, Zero: {}, Interrupt: {}, Decimal: {}, Overflow: {}, Negative: {}", cpu.flags.carry, cpu.flags.zero, cpu.flags.interrupt, cpu.flags.decimal, cpu.flags.overflow, cpu.flags.negative);
     println!("Used Memory:");
     println!("============");

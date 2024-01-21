@@ -18,16 +18,10 @@ impl CPU{
         self.push_byte_to_stack(high_byte);
     }
 
-    pub fn pop_byte_from_stack(&mut self) -> Option<u8>{
-        if self.registers.sp == 0xFF {
-            None
-        }
-        else{
-            let value = self.memory[CPU::convert_address_to_stack(self.registers.sp)];
-            self.registers.sp = self.registers.sp.wrapping_add(1);
-
-            Some(value)
-        }
+    pub fn pop_byte_from_stack(&mut self) -> Option<u8> {
+        self.registers.sp = self.registers.sp.wrapping_add(1);
+        let value = self.memory[CPU::convert_address_to_stack(self.registers.sp)];
+        Some(value)
     }
 
     pub fn pop_word_from_stack(&mut self) -> Option<u16>{

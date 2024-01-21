@@ -64,7 +64,7 @@ impl CPU{
                 xr: 0,
                 yr: 0,
                 sr: 0,
-                sp: 0xFF,
+                sp: 0xFFu8,
             },
             flags: Flags {
                 negative: false,
@@ -558,6 +558,7 @@ impl CPU{
         match parameter {
             InstructionParameter::None => {
                 self.push_byte_to_stack(self.flags.to_byte());
+                self.flags.brk = true;
 
                 None
             }
@@ -585,6 +586,7 @@ impl CPU{
             InstructionParameter::None => {
                 if let Some(result) = self.pop_byte_from_stack(){
                     self.flags.load_from_byte(result);
+                    self.flags.brk = false;
                 }
 
                 None
