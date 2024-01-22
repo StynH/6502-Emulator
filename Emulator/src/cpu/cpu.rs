@@ -1,5 +1,5 @@
 use crate::cpu::instructions::InstructionParameter;
-use crate::helpers::bitwise::{get_bit_at_position, get_msb, is_highest_bit_set};
+use crate::helpers::bitwise::{get_bit_at_position, get_msb, is_highest_bit_set, merge_bytes_into_word, split_word_into_bytes};
 
 pub struct CPU{
     pub registers: Registers,
@@ -13,7 +13,6 @@ pub struct Registers{
     pub pc: u16,
     pub xr: u8,
     pub yr: u8,
-    pub sr: u8,
     pub sp: u8
 }
 
@@ -63,7 +62,6 @@ impl CPU{
                 pc: 0,
                 xr: 0,
                 yr: 0,
-                sr: 0,
                 sp: 0xFFu8,
             },
             flags: Flags {
@@ -231,9 +229,19 @@ impl CPU{
     pub fn op_brk(&mut self, parameter: InstructionParameter) -> Option<u8> {
         match parameter {
             InstructionParameter::None => {
-                self.push_word_to_stack(self.registers.pc + 2);
-                self.registers.sr = 1;
-                self.push_byte_to_stack(self.registers.sr);
+                //BRK does not affect any registers or flags.
+                let (high_byte, low_byte) = split_word_into_bytes(self.registers.pc + 2);
+                self.memory[self.registers.sp as usize] = high_byte;
+                self.memory[self.registers.sp.wrapping_sub(1) as usize] = low_byte;
+
+                self.flags.brk = true;
+                self.memory[self.registers.sp.wrapping_sub(2) as usize] = self.flags.to_byte();
+                self.flags.interrupt = true;
+
+                //Set PC to interrupt vector.
+                let low_byte = self.memory[0xFFFE];
+                let high_byte = self.memory[0xFFFF];
+                self.registers.pc = merge_bytes_into_word(high_byte, low_byte);
 
                 None
             }

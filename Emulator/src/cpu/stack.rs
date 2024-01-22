@@ -14,8 +14,8 @@ impl CPU{
 
     pub fn push_word_to_stack(&mut self, value: u16){
         let (high_byte, low_byte) = split_word_into_bytes(value);
-        self.push_byte_to_stack(low_byte);
         self.push_byte_to_stack(high_byte);
+        self.push_byte_to_stack(low_byte);
     }
 
     pub fn pop_byte_from_stack(&mut self) -> Option<u8> {
@@ -25,17 +25,9 @@ impl CPU{
     }
 
     pub fn pop_word_from_stack(&mut self) -> Option<u16>{
-        if self.registers.sp == 0xFF || self.registers.sp == 0xFE {
-            None
-        }
-        else{
-            self.registers.sp = self.registers.sp.wrapping_add(1);
-            let low_byte = self.memory[CPU::convert_address_to_stack(self.registers.sp)];
+        let low_byte = self.pop_byte_from_stack().unwrap();
+        let high_byte = self.pop_byte_from_stack().unwrap();
 
-            self.registers.sp = self.registers.sp.wrapping_add(1);
-            let high_byte = self.memory[CPU::convert_address_to_stack(self.registers.sp)];
-
-            Some(merge_bytes_into_word(high_byte, low_byte))
-        }
+        Some(merge_bytes_into_word(high_byte, low_byte))
     }
 }

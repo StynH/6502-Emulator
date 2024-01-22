@@ -10,6 +10,10 @@ pub fn merge_bytes_into_word(high_byte: u8, low_byte: u8) -> u16{
     (high_byte as u16) << 8 | low_byte as u16
 }
 
+pub fn merge_bytes_into_word_u16(high_byte: u16, low_byte: u16) -> u16{
+    (high_byte as u16) << 8 | low_byte as u16
+}
+
 pub fn get_msb(value: u8) -> u8{
     get_bit_at_position(value, 7)
 }
