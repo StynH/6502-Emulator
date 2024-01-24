@@ -160,8 +160,8 @@ impl CPU {
                 self.cycles += instruction.cycle_increase + ((instruction.cycle_increases_on_page_cross && page_crossed) as u32);
             }
             AddressingMode::Relative => {
-                let value = self.get_next_byte(&mut bytes);
-                (instruction.operation)(self, InstructionParameter::Word(value as u16));
+                let value = self.get_next_word(&mut bytes);
+                (instruction.operation)(self, InstructionParameter::Word(value));
                 (instruction.result_handler)(self, None, None);
 
                 self.cycles += instruction.cycle_increase + ((instruction.cycle_increases_on_page_cross && page_crossed(self.registers.pc, value as u16)) as u32);

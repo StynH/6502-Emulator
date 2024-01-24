@@ -16,6 +16,7 @@ pub struct Registers{
     pub sp: u8
 }
 
+#[derive(Debug, PartialEq)]
 pub struct Flags{
     pub negative: bool,
     pub overflow: bool,
@@ -27,6 +28,18 @@ pub struct Flags{
 }
 
 impl Flags{
+
+    pub fn from_byte(byte: u8) -> Self{
+        Flags{
+            negative:  byte & 1 != 0,
+            overflow:  byte >> 1 & 1 != 0,
+            brk:       byte >> 3 & 1 != 0,
+            decimal:   byte >> 4 & 1 != 0,
+            interrupt: byte >> 5 & 1 != 0,
+            zero:      byte >> 6 & 1 != 0,
+            carry:     byte >> 7 & 1 != 0,
+        }
+    }
 
     pub fn to_byte(&self) -> u8{
         let mut byte = 0u8;
@@ -124,9 +137,9 @@ impl CPU{
 
     pub fn op_bcc(&mut self, parameter: InstructionParameter) -> Option<u8> {
         match parameter {
-            InstructionParameter::Byte(offset) => {
+            InstructionParameter::Word(offset) => {
                 if !self.flags.carry {
-                    let new_pc = self.registers.pc.wrapping_add(offset as u16);
+                    let new_pc = self.registers.pc.wrapping_add(offset);
                     self.registers.pc = new_pc;
                 }
 
@@ -138,9 +151,9 @@ impl CPU{
 
     pub fn op_bcs(&mut self, parameter: InstructionParameter) -> Option<u8> {
         match parameter {
-            InstructionParameter::Byte(offset) => {
+            InstructionParameter::Word(offset) => {
                 if self.flags.carry {
-                    let new_pc = self.registers.pc.wrapping_add(offset as u16);
+                    let new_pc = self.registers.pc.wrapping_add(offset);
                     self.registers.pc = new_pc;
                 }
 
@@ -152,9 +165,9 @@ impl CPU{
 
     pub fn op_beq(&mut self, parameter: InstructionParameter) -> Option<u8> {
         match parameter {
-            InstructionParameter::Byte(offset) => {
+            InstructionParameter::Word(offset) => {
                 if self.flags.zero {
-                    let new_pc = self.registers.pc.wrapping_add(offset as u16);
+                    let new_pc = self.registers.pc.wrapping_add(offset);
                     self.registers.pc = new_pc;
                 }
 
@@ -181,7 +194,7 @@ impl CPU{
 
     pub fn op_bmi(&mut self, parameter: InstructionParameter) -> Option<u8> {
         match parameter {
-            InstructionParameter::Byte(offset) => {
+            InstructionParameter::Word(offset) => {
                 if self.flags.negative {
                     let new_pc = self.registers.pc.wrapping_add(offset as u16);
                     self.registers.pc = new_pc;
@@ -199,7 +212,7 @@ impl CPU{
         match parameter {
             InstructionParameter::Word(offset) => {
                 if !self.flags.zero {
-                    let calculated_offset = (offset as i8) as i16 as u16; //Truncate to an i8 to correctly get negative numbers.
+                    let calculated_offset = offset as i16 as u16; //Truncate to an i8 to correctly get negative numbers.
                     let new_pc = self.registers.pc.wrapping_add(calculated_offset);
                     self.registers.pc = new_pc;
                     self.cycles += 1;
@@ -213,7 +226,7 @@ impl CPU{
 
     pub fn op_bpl(&mut self, parameter: InstructionParameter) -> Option<u8> {
         match parameter {
-            InstructionParameter::Byte(offset) => {
+            InstructionParameter::Word(offset) => {
                 if !self.flags.negative {
                     let new_pc = self.registers.pc.wrapping_add(offset as u16);
                     self.registers.pc = new_pc;
@@ -229,13 +242,13 @@ impl CPU{
     pub fn op_brk(&mut self, parameter: InstructionParameter) -> Option<u8> {
         match parameter {
             InstructionParameter::None => {
-                //BRK does not affect any registers or flags.
                 let (high_byte, low_byte) = split_word_into_bytes(self.registers.pc + 2);
-                self.memory[self.registers.sp as usize] = high_byte;
-                self.memory[self.registers.sp.wrapping_sub(1) as usize] = low_byte;
+                self.push_byte_to_stack(high_byte);
+                self.push_byte_to_stack(low_byte);
 
                 self.flags.brk = true;
-                self.memory[self.registers.sp.wrapping_sub(2) as usize] = self.flags.to_byte();
+                let status = self.flags.to_byte();
+                self.push_byte_to_stack(status);
                 self.flags.interrupt = true;
 
                 //Set PC to interrupt vector.
@@ -251,7 +264,7 @@ impl CPU{
 
     pub fn op_bvc(&mut self, parameter: InstructionParameter) -> Option<u8> {
         match parameter {
-            InstructionParameter::Byte(offset) => {
+            InstructionParameter::Word(offset) => {
                 if !self.flags.overflow {
                     self.registers.pc = self.registers.pc.wrapping_add(offset as u16);
                     self.cycles += 1;
@@ -265,7 +278,7 @@ impl CPU{
 
     pub fn op_bvs(&mut self, parameter: InstructionParameter) -> Option<u8> {
         match parameter {
-            InstructionParameter::Byte(offset) => {
+            InstructionParameter::Word(offset) => {
                 if self.flags.overflow {
                     self.registers.pc = self.registers.pc.wrapping_add(offset as u16);
                     self.cycles += 1;
@@ -368,7 +381,7 @@ impl CPU{
             InstructionParameter::Byte(value) => {
                 let result = value.wrapping_sub(1);
                 self.flags.zero = result == 0;
-                self.flags.negative = get_msb(value) != 0;
+                self.flags.negative = get_msb(result) != 0;
 
                 Some(result)
             }
@@ -407,11 +420,11 @@ impl CPU{
     pub fn op_eor(&mut self, parameter: InstructionParameter) -> Option<u8> {
         match parameter {
             InstructionParameter::Byte(value) => {
-                self.registers.acc ^= value;
-                self.flags.zero = self.registers.acc == 0;
-                self.flags.negative = get_msb(self.registers.acc) != 0;
+                let result = self.registers.acc ^ value;
+                self.flags.zero = result == 0;
+                self.flags.negative = get_msb(result) != 0;
 
-                None
+                Some(result)
             }
             _ => { None }
         }
@@ -655,7 +668,6 @@ impl CPU{
             InstructionParameter::None => {
                 if let Some(value) = self.pop_word_from_stack() {
                     self.registers.pc = value;
-                    self.registers.pc = self.registers.pc.wrapping_add(1);
                 }
 
                 None
@@ -726,6 +738,7 @@ impl CPU{
                     panic!("Memory access out of bounds");
                 }
                 self.memory[address as usize] = self.registers.acc;
+                self.registers.acc = 0x00;
 
                 None
             }
@@ -740,6 +753,7 @@ impl CPU{
                     panic!("Memory access out of bounds");
                 }
                 self.memory[address as usize] = self.registers.xr;
+                self.registers.xr = 0x00;
 
                 None
             }
@@ -754,6 +768,7 @@ impl CPU{
                     panic!("Memory access out of bounds");
                 }
                 self.memory[address as usize] = self.registers.yr;
+                self.registers.yr = 0x00;
 
                 None
             }
@@ -817,6 +832,7 @@ impl CPU{
         match parameter {
             InstructionParameter::None => {
                 self.registers.sp = self.registers.xr;
+                self.registers.xr = 0x00;
 
                 None
             }

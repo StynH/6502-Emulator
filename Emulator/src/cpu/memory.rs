@@ -30,7 +30,7 @@ impl CPU {
         let high_byte = *self.memory.get(index.wrapping_add(1) as usize).unwrap_or_else(|| {
             panic!("Memory out of bounds")
         });
-        let final_address = merge_bytes_into_word(low_byte, high_byte);
+        let final_address = merge_bytes_into_word(high_byte, low_byte);
 
         (*self.memory.get(final_address as usize).unwrap_or_else(|| {
             panic!("Memory out of bounds")

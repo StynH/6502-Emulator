@@ -2,6 +2,7 @@ use crate::cpu::cpu::CPU;
 
 mod cpu;
 mod helpers;
+mod tests;
 
 fn main() {
     let mut cpu = CPU::new();
