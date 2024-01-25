@@ -94,13 +94,18 @@ impl CPU{
     pub fn op_adc(&mut self, parameter: InstructionParameter) -> Option<u8> {
         match parameter {
             InstructionParameter::Byte(value) => {
-                let mut sum = self.registers.acc as u16 + value as u16;
-                if self.flags.carry {
-                    sum += 1
-                }
+                let value = value as u16;
+                let carry = if self.flags.carry { 1 } else { 0 };
+                let sum = (self.registers.acc as u16) + value + carry;
+
                 self.flags.carry = sum > 0xFF;
-                self.flags.zero = sum == 0;
+                self.flags.zero = (sum as u8) == 0;
                 self.flags.negative = is_highest_bit_set(sum as u8);
+
+                let acc_sign = self.registers.acc & 0x80;
+                let value_sign = value as u8 & 0x80;
+                let sum_sign = (sum as u8) & 0x80;
+                self.flags.overflow = (acc_sign == value_sign) && (acc_sign != sum_sign);
 
                 Some(sum as u8)
             }

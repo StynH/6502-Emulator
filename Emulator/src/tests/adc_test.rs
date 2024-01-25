@@ -6,13 +6,39 @@ mod adc_test {
     #[test]
     fn adc_test_immediate() {
         let mut cpu = CPU::new();
+
         let bytes = [
-            0x69, 0x20
+            0x69, 0x7F
         ];
 
+        cpu.registers.acc = 0x80;
+        cpu.flags.carry = true;
         cpu.execute_instruction_sequence(&mut bytes.as_slice());
 
-        assert_eq!(cpu.registers.acc, 0x20);
+        assert_eq!(cpu.registers.acc, 0x00);
+        assert_eq!(cpu.flags.carry, true);
+        assert_eq!(cpu.flags.zero, true);
+        assert_eq!(cpu.flags.negative, false);
+        assert_eq!(cpu.flags.overflow, false);
+    }
+
+    #[test]
+    fn adc_test_immediate_negative() {
+        let mut cpu = CPU::new();
+
+        let bytes = [
+            0x69, 0x50
+        ];
+
+        cpu.registers.acc = 0x50;
+        cpu.flags.carry = false;
+        cpu.execute_instruction_sequence(&mut bytes.as_slice());
+
+        assert_eq!(cpu.registers.acc, 0xA0);
+        assert_eq!(cpu.flags.carry, false);
+        assert_eq!(cpu.flags.zero, false);
+        assert_eq!(cpu.flags.negative, true);
+        assert_eq!(cpu.flags.overflow, true);
     }
 
     #[test]
